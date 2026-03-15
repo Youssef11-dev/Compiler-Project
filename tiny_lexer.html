@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiny Language — Lexical Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0c0d10;
+  --s1:#13151a;
+  --s2:#1a1d24;
+  --s3:#22252f;
+  --border:#2a2d38;
+  --border2:#363a4a;
+  --text:#dde0f0;
+  --text2:#8890aa;
+  --text3:#4a5070;
+  --accent:#7b6cff;
+  --accent2:#a394ff;
+  --ac-bg:rgba(123,108,255,.13);
+  --green:#34d399;
+  --gn-bg:rgba(52,211,153,.1);
+  --red:#f87171;
+  --rd-bg:rgba(248,113,113,.1);
+  --amber:#fbbf24;
+  --am-bg:rgba(251,191,36,.1);
+  --teal:#2dd4bf;
+  --tl-bg:rgba(45,212,191,.1);
+  --pink:#e879f9;
+  --pk-bg:rgba(232,121,249,.1);
+  --blue:#60a5fa;
+  --bl-bg:rgba(96,165,250,.1);
+  --sky:#38bdf8;
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Syne',sans-serif;
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* HEADER */
+header{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 24px;
+  background:var(--s1);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.logo{
+  width:34px;height:34px;border-radius:8px;
+  background:var(--ac-bg);border:1px solid var(--accent);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.logo-icon{width:16px;height:16px;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hdr-title{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.hdr-sub{font-size:11px;color:var(--text3);margin-top:1px;font-family:var(--mono)}
+.hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.pill{
+  font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid;
+  font-family:var(--mono);
+}
+.pill-v{color:var(--green);border-color:rgba(52,211,153,.4);background:var(--gn-bg)}
+.pill-m{color:var(--accent2);border-color:rgba(123,108,255,.4);background:var(--ac-bg);cursor:pointer;transition:.2s}
+.pill-m:hover{background:rgba(123,108,255,.22)}
+.pill-m.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* LAYOUT */
+.workspace{display:flex;flex:1;overflow:hidden;height:calc(100vh - 57px)}
+
+/* LEFT PANEL */
+.left-panel{
+  width:420px;flex-shrink:0;
+  display:flex;flex-direction:column;
+  border-right:1px solid var(--border);
+  background:var(--s1);
+}
+.panel-hdr{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 16px;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.panel-hdr-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3)}
+.dot{width:7px;height:7px;border-radius:50%}
+.dot-purple{background:var(--accent)}
+.dot-green{background:var(--green)}
+.dot-teal{background:var(--teal)}
+.dot-amber{background:var(--amber)}
+.dot-red{background:var(--red)}
+
+.editor-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.line-nums{
+  position:absolute;left:0;top:0;bottom:0;width:40px;
+  background:var(--bg);border-right:1px solid var(--border);
+  padding:14px 0;overflow:hidden;pointer-events:none;z-index:1;
+}
+.line-num{
+  height:21px;line-height:21px;
+  text-align:right;padding-right:10px;
+  font-family:var(--mono);font-size:11px;color:var(--text3);
+}
+#code-input{
+  flex:1;resize:none;border:none;outline:none;
+  background:transparent;color:var(--text);
+  font-family:var(--mono);font-size:13px;line-height:21px;
+  padding:14px 14px 14px 54px;
+  caret-color:var(--accent);
+  tab-size:2;
+}
+#code-input::selection{background:rgba(123,108,255,.3)}
+#code-input::placeholder{color:var(--text3)}
+
+.action-bar{
+  padding:10px 16px;border-top:1px solid var(--border);
+  display:flex;gap:8px;align-items:center;flex-shrink:0;
+}
+.btn{
+  font-family:var(--sans);font-size:12px;font-weight:600;
+  padding:7px 16px;border-radius:7px;border:none;cursor:pointer;
+  transition:.15s;
+}
+.btn-primary{
+  background:var(--accent);color:#fff;
+}
+.btn-primary:hover{background:var(--accent2)}
+.btn-primary:active{transform:scale(.97)}
+.btn-ghost{
+  background:transparent;color:var(--text2);
+  border:1px solid var(--border2);
+}
+.btn-ghost:hover{background:var(--s3);color:var(--text)}
+.stat-chip{
+  margin-left:auto;font-family:var(--mono);font-size:11px;
+  color:var(--text3);
+}
+.stat-chip span{color:var(--accent2);font-weight:700}
+
+/* MODE TABS */
+.mode-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.mode-tab{
+  flex:1;padding:9px;text-align:center;
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
+  color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;
+  transition:.15s;
+}
+.mode-tab:hover{color:var(--text2)}
+.mode-tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
+
+/* RIGHT PANEL */
+.right-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* TOKEN TABLE */
+.table-wrap{flex:1;overflow-y:auto;overflow-x:hidden}
+.table-wrap::-webkit-scrollbar{width:5px}
+.table-wrap::-webkit-scrollbar-track{background:transparent}
+.table-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+thead{position:sticky;top:0;z-index:2}
+thead tr{background:var(--s2);border-bottom:1px solid var(--border)}
+th{
+  padding:9px 14px;text-align:left;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
+  color:var(--text3);
+}
+tbody tr{border-bottom:1px solid var(--border);transition:.1s}
+tbody tr:hover{background:var(--s2)}
+td{padding:7px 14px;vertical-align:middle}
+.td-num{color:var(--text3);width:44px;text-align:center}
+.td-line{color:var(--text3);width:50px;text-align:center}
+.td-lexeme{color:var(--text);font-weight:500}
+.td-type{}
+.type-badge{
+  display:inline-block;
+  font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;
+  text-transform:uppercase;letter-spacing:.5px;
+}
+
+/* BADGE COLORS */
+.tb-keyword{color:var(--accent2);background:var(--ac-bg)}
+.tb-identifier{color:var(--teal);background:var(--tl-bg)}
+.tb-number{color:var(--amber);background:var(--am-bg)}
+.tb-string{color:var(--pink);background:var(--pk-bg)}
+.tb-assign{color:var(--green);background:var(--gn-bg)}
+.tb-operator{color:var(--blue);background:var(--bl-bg)}
+.tb-symbol{color:var(--text2);background:var(--s3)}
+.tb-comment{color:var(--text3);background:var(--s2);font-style:italic}
+.tb-error{color:var(--red);background:var(--rd-bg)}
+.tb-bool{color:#f472b6;background:rgba(244,114,182,.1)}
+
+/* EMPTY / PLACEHOLDER */
+.placeholder{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:12px;color:var(--text3);
+}
+.ph-icon{width:48px;height:48px;opacity:.3}
+.ph-text{font-size:13px}
+.ph-sub{font-size:11px;font-family:var(--mono);opacity:.7}
+
+/* STATS BAR */
+.stats-bar{
+  padding:8px 16px;border-top:1px solid var(--border);
+  display:flex;gap:16px;align-items:center;
+  background:var(--s1);flex-shrink:0;flex-wrap:wrap;
+}
+.stat-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3)}
+.stat-label{}
+.stat-val{font-family:var(--mono);font-weight:700}
+.sv-total{color:var(--text2)}
+.sv-kw{color:var(--accent2)}
+.sv-id{color:var(--teal)}
+.sv-num{color:var(--amber)}
+.sv-str{color:var(--pink)}
+.sv-op{color:var(--blue)}
+.sv-err{color:var(--red)}
+
+/* ERRORS PANEL */
+.errors-panel{
+  border-top:1px solid var(--border);
+  max-height:120px;overflow-y:auto;flex-shrink:0;
+}
+.errors-panel:empty{display:none}
+.error-row{
+  display:flex;align-items:center;gap:10px;
+  padding:6px 16px;border-bottom:1px solid var(--border);
+  font-size:12px;font-family:var(--mono);
+}
+.err-icon{color:var(--red);flex-shrink:0}
+.err-msg{color:var(--red)}
+.err-pos{color:var(--text3);margin-left:auto}
+
+/* DFA STATE VIZ */
+.dfa-trace{
+  border-top:1px solid var(--border);
+  padding:10px 16px;flex-shrink:0;
+  font-size:11px;font-family:var(--mono);
+  color:var(--text3);overflow-x:auto;white-space:nowrap;
+}
+.dfa-trace:empty{display:none}
+.state-chip{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;border-radius:50%;
+  border:1.5px solid var(--border2);font-size:10px;font-weight:700;
+  color:var(--text2);margin:0 2px;vertical-align:middle;
+  background:var(--s2);
+}
+.state-chip.accept{border-color:var(--green);color:var(--green);background:var(--gn-bg)}
+.state-chip.active{border-color:var(--accent);color:var(--accent);background:var(--ac-bg)}
+.arrow{color:var(--text3);margin:0 2px;vertical-align:middle}
+
+/* SCROLLBAR */
+.left-panel::-webkit-scrollbar,.right-panel::-webkit-scrollbar{display:none}
+
+/* RESIZER */
+.resizer{
+  width:4px;background:var(--border);cursor:col-resize;flex-shrink:0;
+  transition:.1s;
+}
+.resizer:hover{background:var(--accent)}
+
+/* TOOLTIP */
+.tooltip{position:relative}
+.tooltip:hover::after{
+  content:attr(data-tip);
+  position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:var(--s3);color:var(--text);border:1px solid var(--border2);
+  font-size:11px;padding:4px 8px;border-radius:5px;white-space:nowrap;
+  pointer-events:none;z-index:99;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg class="logo-icon" viewBox="0 0 24 24">
+      <polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/>
+      <line x1="12" y1="4" x2="12" y2="20"/>
+    </svg>
+  </div>
+  <div>
+    <div class="hdr-title">Tiny Language — Lexical Analyzer</div>
+    <div class="hdr-sub">CS321 · El-Shorouk Academy</div>
+  </div>
+  <div class="hdr-right">
+    <span class="pill pill-m tooltip active" id="mode-regex" data-tip="Regex mode (Lab 2)" onclick="setMode('regex')">REGEX</span>
+    <span class="pill pill-m tooltip" id="mode-dfa" data-tip="DFA mode (Lab 3)" onclick="setMode('dfa')">DFA</span>
+    <span class="pill pill-v">TINY LANG</span>
+  </div>
+</header>
+
+<div class="workspace">
+  <!-- LEFT: EDITOR -->
+  <div class="left-panel" id="left-panel">
+    <div class="panel-hdr">
+      <div class="dot dot-purple"></div>
+      <span class="panel-hdr-title">Source Code</span>
+    </div>
+
+    <div class="mode-tabs">
+      <div class="mode-tab active" onclick="loadSample('sample1')">Sample 1</div>
+      <div class="mode-tab" onclick="loadSample('sample2')">Sample 2</div>
+      <div class="mode-tab" onclick="loadSample('blank')">Blank</div>
+    </div>
+
+    <div class="editor-wrap">
+      <div class="line-nums" id="line-nums"></div>
+      <textarea id="code-input" spellcheck="false"
+        placeholder="/* Write your Tiny Language code here */"
+        oninput="updateLineNums(); autoScan()"></textarea>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-primary" onclick="scan()">&#9654;&nbsp; Scan</button>
+      <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
+      <span class="stat-chip" id="char-count">0 chars</span>
+    </div>
+  </div>
+
+  <div class="resizer" id="resizer"></div>
+
+  <!-- RIGHT: OUTPUT -->
+  <div class="right-panel">
+    <div class="panel-hdr">
+      <div class="dot dot-green"></div>
+      <span class="panel-hdr-title" id="output-title">Token Stream</span>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="copyTokens()">Copy CSV</button>
+      </div>
+    </div>
+
+    <div class="table-wrap" id="table-wrap">
+      <div class="placeholder" id="placeholder">
+        <svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="9" x2="21" y2="9"/>
+          <line x1="9" y1="21" x2="9" y2="9"/>
+        </svg>
+        <div class="ph-text">No tokens yet</div>
+        <div class="ph-sub">Write code and press Scan</div>
+      </div>
+      <table id="token-table" style="display:none">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Line</th>
+            <th>Lexeme</th>
+            <th>Token Type</th>
+          </tr>
+        </thead>
+        <tbody id="token-body"></tbody>
+      </table>
+    </div>
+
+    <div class="errors-panel" id="errors-panel"></div>
+
+    <div class="dfa-trace" id="dfa-trace"></div>
+
+    <div class="stats-bar" id="stats-bar" style="display:none">
+      <div class="stat-item"><span class="stat-label">Total</span><span class="stat-val sv-total" id="st-total">0</span></div>
+      <div class="stat-item"><div class="dot dot-purple" style="width:6px;height:6px"></div><span class="stat-val sv-kw" id="st-kw">0</span><span class="stat-label">keywords</span></div>
+      <div class="stat-item"><div class="dot dot-teal" style="width:6px;height:6px"></div><span class="stat-val sv-id" id="st-id">0</span><span class="stat-label">identifiers</span></div>
+      <div class="stat-item"><div class="dot dot-amber" style="width:6px;height:6px"></div><span class="stat-val sv-num" id="st-num">0</span><span class="stat-label">numbers</span></div>
+      <div class="stat-item"><div class="dot" style="width:6px;height:6px;background:var(--pink)"></div><span class="stat-val sv-str" id="st-str">0</span><span class="stat-label">strings</span></div>
+      <div class="stat-item"><div class="dot" style="width:6px;height:6px;background:var(--red)"></div><span class="stat-val sv-err" id="st-err">0</span><span class="stat-label">errors</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════
+   TINY LANGUAGE DEFINITION
+   ═══════════════════════════════════════════════════ */
+const KEYWORDS = new Set([
+  'int','float','string','read','write','repeat','until',
+  'if','elseif','else','then','return','endl','main'
+]);
+
+/* ═══════════════════════════════════════════════════
+   SAMPLES
+   ═══════════════════════════════════════════════════ */
+const SAMPLES = {
+  sample1: `/* Sample: factorial */
+int main()
+{
+  int x;
+  read x;
+  if x > 0 then
+    int fact := 1;
+    repeat
+      fact := fact * x;
+      x := x - 1;
+    until x = 0
+    write fact;
+  end
+  return 0;
+}`,
+  sample2: `/* Sample: sum function */
+int sum(int a, int b)
+{
+  return a + b;
+}
+int main()
+{
+  int val, counter;
+  read val;
+  counter := 0;
+  float z1 := 3*2*(2+1)/2-5.3;
+  z1 := z1 + sum(1,val);
+  if z1 > 5 || z1 < counter then
+    write z1;
+  elseif z1 < 5 then
+    z1 := 5;
+  else
+    z1 := counter;
+  end
+  write "Result = ";
+  write z1;
+  write endl;
+  return 0;
+}`,
+  blank: ''
+};
+
+/* ═══════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════ */
+let currentMode = 'regex';
+let tokens = [];
+let autoScanTimer = null;
+
+/* ═══════════════════════════════════════════════════
+   MODE
+   ═══════════════════════════════════════════════════ */
+function setMode(m) {
+  currentMode = m;
+  document.getElementById('mode-regex').classList.toggle('active', m==='regex');
+  document.getElementById('mode-dfa').classList.toggle('active', m==='dfa');
+  document.getElementById('output-title').textContent = m === 'dfa' ? 'Token Stream (DFA)' : 'Token Stream (Regex)';
+  document.getElementById('dfa-trace').style.display = m === 'dfa' ? '' : 'none';
+  if (document.getElementById('code-input').value.trim()) scan();
+}
+
+/* ═══════════════════════════════════════════════════
+   REGEX SCANNER — covers all 31 Tiny Language rules
+   ═══════════════════════════════════════════════════ */
+function regexScan(src) {
+  const results = [];
+  // Master pattern — ORDER MATTERS (keywords before identifiers, := before :, == before =)
+  const masterPattern = [
+    { re: /\/\*[\s\S]*?\*\//g,          type: 'COMMENT' },
+    { re: /"([^"\\]|\\.)*"/g,           type: 'STRING' },
+    { re: /\b(int|float|string|read|write|repeat|until|if|elseif|else|then|return|endl|main)\b/g, type: 'KEYWORD' },
+    { re: /[a-zA-Z][a-zA-Z0-9]*/g,      type: 'IDENTIFIER' },
+    { re: /\d+\.\d+/g,                  type: 'NUMBER' },
+    { re: /\d+/g,                        type: 'NUMBER' },
+    { re: /:=/g,                         type: 'ASSIGN_OP' },
+    { re: /<>/g,                         type: 'NOT_EQUAL_OP' },
+    { re: /&&/g,                         type: 'AND_OP' },
+    { re: /\|\|/g,                       type: 'OR_OP' },
+    { re: /\+/g,                         type: 'PLUS_OP' },
+    { re: /-/g,                          type: 'MINUS_OP' },
+    { re: /\*/g,                         type: 'MULT_OP' },
+    { re: /\//g,                         type: 'DIV_OP' },
+    { re: /</g,                          type: 'LT_OP' },
+    { re: />/g,                          type: 'GT_OP' },
+    { re: /=/g,                          type: 'EQ_OP' },
+    { re: /;/g,                          type: 'SEMICOLON' },
+    { re: /,/g,                          type: 'COMMA' },
+    { re: /\(/g,                         type: 'LEFT_PAREN' },
+    { re: /\)/g,                         type: 'RIGHT_PAREN' },
+    { re: /\{/g,                         type: 'LEFT_BRACE' },
+    { re: /\}/g,                         type: 'RIGHT_BRACE' },
+  ].map(({re,type})=>({re:new RegExp(re.source,'g'),type}));
+
+  // Build line-start index for line number calculation
+  const lineStarts = [0];
+  for (let i = 0; i < src.length; i++) {
+    if (src[i] === '\n') lineStarts.push(i + 1);
+  }
+  const getLine = pos => {
+    let lo = 0, hi = lineStarts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (lineStarts[mid] <= pos) lo = mid; else hi = mid - 1;
+    }
+    return lo + 1;
+  };
+
+  // Collect all matches
+  const all = [];
+  for (const {re, type} of masterPattern) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      all.push({ start: m.index, end: m.index + m[0].length, lexeme: m[0], type });
+    }
+  }
+
+  // Sort by position; break ties by priority (longer match wins, else first defined)
+  all.sort((a, b) => a.start !== b.start ? a.start - b.start : (b.end - b.start) - (a.end - a.start));
+
+  // Greedy non-overlapping selection
+  let cursor = 0;
+  let idx = 1;
+  for (const tok of all) {
+    if (tok.start < cursor) continue;
+    // Check for unknown chars between cursor and this token
+    const gap = src.slice(cursor, tok.start).replace(/\s/g, '');
+    if (gap.length > 0) {
+      // Report unknowns char by char
+      let pos = cursor;
+      for (const ch of src.slice(cursor, tok.start)) {
+        if (!/\s/.test(ch)) {
+          results.push({ n: idx++, line: getLine(pos), lexeme: ch, type: 'ERROR', raw: 'LEXICAL_ERROR' });
+        }
+        pos++;
+      }
+    }
+    // Classify keyword vs identifier
+    let type = tok.type;
+    if (type === 'IDENTIFIER' && KEYWORDS.has(tok.lexeme)) type = 'KEYWORD';
+    results.push({ n: idx++, line: getLine(tok.start), lexeme: tok.lexeme, type, raw: tok.lexeme });
+    cursor = tok.end;
+  }
+  // Trailing unknowns
+  const tail = src.slice(cursor).replace(/\s/g, '');
+  if (tail.length > 0) {
+    let pos = cursor;
+    for (const ch of src.slice(cursor)) {
+      if (!/\s/.test(ch)) results.push({ n: idx++, line: getLine(pos), lexeme: ch, type: 'ERROR', raw: 'LEXICAL_ERROR' });
+      pos++;
+    }
+  }
+
+  return results;
+}
+
+/* ═══════════════════════════════════════════════════
+   DFA SCANNER — character-by-character state machine
+   Covers: identifiers/keywords, integers, floats,
+   strings, comments, all operators & symbols
+   ═══════════════════════════════════════════════════ */
+function dfaScan(src) {
+  const results = [];
+  const traceSteps = [];
+
+  const input = src + ' '; // sentinel
+  let state = 0;
+  let lexeme = '';
+  let lexStart = 0;
+
+  const lineStarts = [0];
+  for (let i = 0; i < src.length; i++) if (src[i] === '\n') lineStarts.push(i + 1);
+  const getLine = pos => {
+    let lo = 0, hi = lineStarts.length - 1;
+    while (lo < hi) { const mid = (lo+hi+1)>>1; if(lineStarts[mid]<=pos) lo=mid; else hi=mid-1; } return lo+1;
+  };
+
+  let idx = 1;
+  const emit = (lex, type, pos) => {
+    if (!lex) return;
+    let t = type;
+    if (type === 'IDENTIFIER' && KEYWORDS.has(lex)) t = 'KEYWORD';
+    results.push({ n: idx++, line: getLine(pos - lex.length), lexeme: lex, type: t });
+  };
+
+  let i = 0;
+  while (i < input.length) {
+    const ch = input[i];
+    const isLetter = /[a-zA-Z]/.test(ch);
+    const isDigit = /[0-9]/.test(ch);
+    const isLetterOrDigit = /[a-zA-Z0-9]/.test(ch);
+    const isWS = /\s/.test(ch);
+
+    if (traceSteps.length < 60) traceSteps.push({ state, ch: ch === '\n' ? '\\n' : ch });
+
+    switch (state) {
+      case 0: // START
+        lexeme = '';
+        lexStart = i;
+        if (isWS) { i++; break; }
+        if (isLetter) { state = 1; lexeme += ch; i++; break; }
+        if (isDigit) { state = 2; lexeme += ch; i++; break; }
+        if (ch === ':') { state = 3; lexeme += ch; i++; break; }
+        if (ch === '<') { state = 10; lexeme += ch; i++; break; }
+        if (ch === '>') { emit('>', 'GT_OP', i+1); i++; break; }
+        if (ch === '=') { emit('=', 'EQ_OP', i+1); i++; break; }
+        if (ch === '&') { state = 11; lexeme += ch; i++; break; }
+        if (ch === '|') { state = 12; lexeme += ch; i++; break; }
+        if (ch === '"') { state = 5; lexeme += ch; i++; break; }
+        if (ch === '/' && input[i+1] === '*') { state = 6; lexeme += ch; i++; break; }
+        if (ch === '/') { emit('/', 'DIV_OP', i+1); i++; break; }
+        if (ch === '+') { emit('+', 'PLUS_OP', i+1); i++; break; }
+        if (ch === '-') { emit('-', 'MINUS_OP', i+1); i++; break; }
+        if (ch === '*') { emit('*', 'MULT_OP', i+1); i++; break; }
+        if (ch === ';') { emit(';', 'SEMICOLON', i+1); i++; break; }
+        if (ch === ',') { emit(',', 'COMMA', i+1); i++; break; }
+        if (ch === '(') { emit('(', 'LEFT_PAREN', i+1); i++; break; }
+        if (ch === ')') { emit(')', 'RIGHT_PAREN', i+1); i++; break; }
+        if (ch === '{') { emit('{', 'LEFT_BRACE', i+1); i++; break; }
+        if (ch === '}') { emit('}', 'RIGHT_BRACE', i+1); i++; break; }
+        if (i < src.length) { emit(ch, 'ERROR', i+1); i++; break; }
+        i++; break;
+
+      case 1: // IDENTIFIER
+        if (isLetterOrDigit) { lexeme += ch; i++; }
+        else { emit(lexeme, 'IDENTIFIER', i); state = 0; }
+        break;
+
+      case 2: // NUMBER (integer or float)
+        if (isDigit) { lexeme += ch; i++; }
+        else if (ch === '.' && /[0-9]/.test(input[i+1])) { state = 20; lexeme += ch; i++; }
+        else { emit(lexeme, 'NUMBER', i); state = 0; }
+        break;
+
+      case 20: // FLOAT after decimal point
+        if (isDigit) { lexeme += ch; i++; }
+        else { emit(lexeme, 'NUMBER', i); state = 0; }
+        break;
+
+      case 3: // After ':'
+        if (ch === '=') { lexeme += ch; emit(lexeme, 'ASSIGN_OP', i+1); state = 0; i++; }
+        else { emit(':', 'ERROR', i); state = 0; }
+        break;
+
+      case 5: // STRING — inside double quotes
+        lexeme += ch; i++;
+        if (ch === '"' && lexeme.length > 1) { emit(lexeme, 'STRING', i); state = 0; }
+        else if (ch === '\n') { emit(lexeme, 'ERROR', i); state = 0; }
+        break;
+
+      case 6: // COMMENT — inside /* */
+        lexeme += ch; i++;
+        if (ch === '*' && input[i] === '/') { lexeme += '/'; i++; emit(lexeme, 'COMMENT', i); state = 0; }
+        break;
+
+      case 10: // After '<'
+        if (ch === '>') { emit('<>', 'NOT_EQUAL_OP', i+1); state = 0; i++; }
+        else { emit('<', 'LT_OP', i); state = 0; }
+        break;
+
+      case 11: // After '&'
+        if (ch === '&') { emit('&&', 'AND_OP', i+1); state = 0; i++; }
+        else { emit('&', 'ERROR', i); state = 0; }
+        break;
+
+      case 12: // After '|'
+        if (ch === '|') { emit('||', 'OR_OP', i+1); state = 0; i++; }
+        else { emit('|', 'ERROR', i); state = 0; }
+        break;
+
+      default: state = 0; i++;
+    }
+  }
+
+  renderDFATrace(traceSteps);
+  return results;
+}
+
+/* ═══════════════════════════════════════════════════
+   DFA TRACE VISUALIZER
+   ═══════════════════════════════════════════════════ */
+const STATE_NAMES = {0:'q₀',1:'q₁',2:'q₂',3:'q₃',4:'q₄',5:'q₅',6:'q₆',
+  10:'q₁₀',11:'q₁₁',12:'q₁₂',20:'q₂₀'};
+const ACCEPT_STATES = new Set([0,1,2,4,5,6,20]);
+
+function renderDFATrace(steps) {
+  const el = document.getElementById('dfa-trace');
+  if (currentMode !== 'dfa') { el.innerHTML=''; return; }
+  if (!steps.length) { el.innerHTML=''; return; }
+  const shown = steps.slice(0, 40);
+  let html = '<span style="color:var(--text3);font-size:10px;margin-right:8px">DFA TRACE:</span>';
+  shown.forEach(({state,ch},i) => {
+    const name = STATE_NAMES[state] || `q${state}`;
+    const cls = ACCEPT_STATES.has(state) ? 'accept' : '';
+    html += `<span class="state-chip ${cls}">${name}</span>`;
+    if (i < shown.length - 1) html += `<span class="arrow">${ch==' '?'⎵':ch==='\\n'?'↵':ch}→</span>`;
+  });
+  if (steps.length > 40) html += `<span style="color:var(--text3)"> +${steps.length-40} more</span>`;
+  el.innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════
+   TOKEN TYPE → BADGE CLASS
+   ═══════════════════════════════════════════════════ */
+function badgeClass(type) {
+  const map = {
+    KEYWORD:'tb-keyword', IDENTIFIER:'tb-identifier',
+    NUMBER:'tb-number', STRING:'tb-string',
+    ASSIGN_OP:'tb-assign',
+    PLUS_OP:'tb-operator', MINUS_OP:'tb-operator',
+    MULT_OP:'tb-operator', DIV_OP:'tb-operator',
+    LT_OP:'tb-operator', GT_OP:'tb-operator',
+    EQ_OP:'tb-operator', NOT_EQUAL_OP:'tb-operator',
+    AND_OP:'tb-bool', OR_OP:'tb-bool',
+    SEMICOLON:'tb-symbol', COMMA:'tb-symbol',
+    LEFT_PAREN:'tb-symbol', RIGHT_PAREN:'tb-symbol',
+    LEFT_BRACE:'tb-symbol', RIGHT_BRACE:'tb-symbol',
+    COMMENT:'tb-comment', ERROR:'tb-error',
+  };
+  return map[type] || 'tb-symbol';
+}
+
+function friendlyType(type) {
+  const map = {
+    KEYWORD:'Keyword', IDENTIFIER:'Identifier',
+    NUMBER:'Number', STRING:'String',
+    ASSIGN_OP:'Assign :=',
+    PLUS_OP:'+', MINUS_OP:'-', MULT_OP:'*', DIV_OP:'/',
+    LT_OP:'< (Less)', GT_OP:'> (Greater)',
+    EQ_OP:'= (Equal)', NOT_EQUAL_OP:'<> (Not Equal)',
+    AND_OP:'&& (AND)', OR_OP:'|| (OR)',
+    SEMICOLON:'Semicolon', COMMA:'Comma',
+    LEFT_PAREN:'Left Paren', RIGHT_PAREN:'Right Paren',
+    LEFT_BRACE:'Left Brace', RIGHT_BRACE:'Right Brace',
+    COMMENT:'Comment', ERROR:'Lexical Error',
+  };
+  return map[type] || type;
+}
+
+/* ═══════════════════════════════════════════════════
+   MAIN SCAN
+   ═══════════════════════════════════════════════════ */
+function scan() {
+  const src = document.getElementById('code-input').value;
+  if (!src.trim()) { clearOutput(); return; }
+
+  tokens = currentMode === 'dfa' ? dfaScan(src) : regexScan(src);
+  renderTable();
+  renderErrors();
+  renderStats();
+}
+
+function autoScan() {
+  clearTimeout(autoScanTimer);
+  autoScanTimer = setTimeout(scan, 600);
+  updateCharCount();
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER TABLE
+   ═══════════════════════════════════════════════════ */
+function renderTable() {
+  const tbody = document.getElementById('token-body');
+  const ph = document.getElementById('placeholder');
+  const table = document.getElementById('token-table');
+
+  if (!tokens.length) { ph.style.display='flex'; table.style.display='none'; return; }
+  ph.style.display='none'; table.style.display='table';
+
+  const rows = tokens.map(t => {
+    const lex = t.lexeme.length > 40 ? t.lexeme.slice(0,40)+'…' : t.lexeme;
+    const display = t.type === 'COMMENT' ? '/* comment */' : lex;
+    return `<tr>
+      <td class="td-num">${t.n}</td>
+      <td class="td-line">${t.line}</td>
+      <td class="td-lexeme">${escHtml(display)}</td>
+      <td class="td-type"><span class="type-badge ${badgeClass(t.type)}">${friendlyType(t.type)}</span></td>
+    </tr>`;
+  });
+  tbody.innerHTML = rows.join('');
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER ERRORS
+   ═══════════════════════════════════════════════════ */
+function renderErrors() {
+  const panel = document.getElementById('errors-panel');
+  const errs = tokens.filter(t => t.type === 'ERROR');
+  if (!errs.length) { panel.innerHTML=''; return; }
+  panel.innerHTML = errs.map(e =>
+    `<div class="error-row">
+      <span class="err-icon">✕</span>
+      <span class="err-msg">Lexical error: unexpected character '${escHtml(e.lexeme)}'</span>
+      <span class="err-pos">line ${e.line}</span>
+    </div>`
+  ).join('');
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER STATS
+   ═══════════════════════════════════════════════════ */
+function renderStats() {
+  const bar = document.getElementById('stats-bar');
+  if (!tokens.length) { bar.style.display='none'; return; }
+  bar.style.display='flex';
+  const count = t => tokens.filter(x => x.type === t).length;
+  const countGroup = (...ts) => tokens.filter(x => ts.includes(x.type)).length;
+  document.getElementById('st-total').textContent = tokens.length;
+  document.getElementById('st-kw').textContent = count('KEYWORD');
+  document.getElementById('st-id').textContent = count('IDENTIFIER');
+  document.getElementById('st-num').textContent = count('NUMBER');
+  document.getElementById('st-str').textContent = count('STRING');
+  document.getElementById('st-err').textContent = count('ERROR');
+}
+
+/* ═══════════════════════════════════════════════════
+   UI HELPERS
+   ═══════════════════════════════════════════════════ */
+function clearOutput() {
+  tokens = [];
+  document.getElementById('placeholder').style.display='flex';
+  document.getElementById('token-table').style.display='none';
+  document.getElementById('errors-panel').innerHTML='';
+  document.getElementById('stats-bar').style.display='none';
+  document.getElementById('dfa-trace').innerHTML='';
+}
+
+function clearAll() {
+  document.getElementById('code-input').value='';
+  updateLineNums(); updateCharCount(); clearOutput();
+}
+
+function loadSample(key) {
+  document.querySelectorAll('.mode-tab').forEach((t,i)=>t.classList.toggle('active',['sample1','sample2','blank'][i]===key));
+  document.getElementById('code-input').value = SAMPLES[key];
+  updateLineNums(); updateCharCount();
+  if (SAMPLES[key].trim()) scan();
+  else clearOutput();
+}
+
+function updateLineNums() {
+  const val = document.getElementById('code-input').value;
+  const lines = val.split('\n').length;
+  const container = document.getElementById('line-nums');
+  let html = '';
+  for (let i = 1; i <= lines; i++) html += `<div class="line-num">${i}</div>`;
+  container.innerHTML = html;
+}
+
+function updateCharCount() {
+  const l = document.getElementById('code-input').value.length;
+  document.getElementById('char-count').innerHTML = `<span>${l}</span> chars`;
+}
+
+function copyTokens() {
+  if (!tokens.length) return;
+  const csv = 'N,Line,Lexeme,Token Type\n' +
+    tokens.map(t => `${t.n},${t.line},"${t.lexeme.replace(/"/g,'""')}",${t.type}`).join('\n');
+  navigator.clipboard.writeText(csv).catch(()=>{});
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ═══════════════════════════════════════════════════
+   RESIZER
+   ═══════════════════════════════════════════════════ */
+const resizer = document.getElementById('resizer');
+const leftPanel = document.getElementById('left-panel');
+let isResizing = false, startX = 0, startW = 0;
+resizer.addEventListener('mousedown', e => {
+  isResizing = true; startX = e.clientX; startW = leftPanel.offsetWidth;
+  document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none';
+});
+document.addEventListener('mousemove', e => {
+  if (!isResizing) return;
+  const w = Math.max(280, Math.min(650, startW + e.clientX - startX));
+  leftPanel.style.width = w + 'px';
+});
+document.addEventListener('mouseup', () => {
+  isResizing = false;
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
+});
+
+/* ═══════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════ */
+loadSample('sample1');
+document.getElementById('dfa-trace').style.display = 'none';
+</script>
+</body>
+</html>

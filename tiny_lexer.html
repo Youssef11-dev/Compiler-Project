@@ -3,873 +3,912 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tiny Language — Lexical Analyzer</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>miniL Compiler — Phase 2: Syntax Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0c0d10;
-  --s1:#13151a;
-  --s2:#1a1d24;
-  --s3:#22252f;
-  --border:#2a2d38;
-  --border2:#363a4a;
-  --text:#dde0f0;
-  --text2:#8890aa;
-  --text3:#4a5070;
-  --accent:#7b6cff;
-  --accent2:#a394ff;
-  --ac-bg:rgba(123,108,255,.13);
-  --green:#34d399;
-  --gn-bg:rgba(52,211,153,.1);
-  --red:#f87171;
-  --rd-bg:rgba(248,113,113,.1);
-  --amber:#fbbf24;
-  --am-bg:rgba(251,191,36,.1);
-  --teal:#2dd4bf;
-  --tl-bg:rgba(45,212,191,.1);
-  --pink:#e879f9;
-  --pk-bg:rgba(232,121,249,.1);
-  --blue:#60a5fa;
-  --bl-bg:rgba(96,165,250,.1);
-  --sky:#38bdf8;
+  --bg:#090a0e;
+  --s1:#0f1116;
+  --s2:#14161d;
+  --s3:#1c1f28;
+  --s4:#232730;
+  --border:#252830;
+  --border2:#31364a;
+  --text:#dde1f5;
+  --text2:#8b93b0;
+  --text3:#454c68;
+  --accent:#6c5ce7;
+  --accent2:#a29bfe;
+  --ac-bg:rgba(108,92,231,.12);
+  --ac-bg2:rgba(108,92,231,.22);
+  --green:#00b894;
+  --gn-bg:rgba(0,184,148,.1);
+  --red:#e17055;
+  --rd-bg:rgba(225,112,85,.1);
+  --amber:#fdcb6e;
+  --am-bg:rgba(253,203,110,.1);
+  --teal:#00cec9;
+  --tl-bg:rgba(0,206,201,.1);
+  --pink:#e84393;
+  --pk-bg:rgba(232,67,147,.1);
+  --blue:#74b9ff;
+  --bl-bg:rgba(116,185,255,.1);
+  --orange:#fd79a8;
+  --or-bg:rgba(253,121,168,.1);
   --mono:'JetBrains Mono',monospace;
   --sans:'Syne',sans-serif;
+  --radius:8px;
 }
-body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
-/* HEADER */
+body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── HEADER ── */
 header{
-  display:flex;align-items:center;gap:14px;
-  padding:14px 24px;
-  background:var(--s1);
-  border-bottom:1px solid var(--border);
-  flex-shrink:0;
+  display:flex;align-items:center;gap:12px;padding:0 20px;height:52px;
+  background:var(--s1);border-bottom:1px solid var(--border);flex-shrink:0;
+  position:relative;z-index:10;
 }
 .logo{
-  width:34px;height:34px;border-radius:8px;
-  background:var(--ac-bg);border:1px solid var(--accent);
+  width:32px;height:32px;border-radius:7px;
+  background:var(--ac-bg);border:1px solid rgba(108,92,231,.4);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
-.logo-icon{width:16px;height:16px;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.hdr-title{font-size:15px;font-weight:700;letter-spacing:-.3px}
-.hdr-sub{font-size:11px;color:var(--text3);margin-top:1px;font-family:var(--mono)}
-.hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center}
-.pill{
-  font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid;
-  font-family:var(--mono);
+.logo svg{width:15px;height:15px;stroke:var(--accent2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hdr-meta{display:flex;flex-direction:column;gap:1px}
+.hdr-title{font-size:14px;font-weight:700;letter-spacing:-.2px;line-height:1}
+.hdr-sub{font-size:10px;color:var(--text3);font-family:var(--mono)}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.phase-badge{
+  display:flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:10px;font-weight:700;
+  padding:4px 10px;border-radius:20px;
 }
-.pill-v{color:var(--green);border-color:rgba(52,211,153,.4);background:var(--gn-bg)}
-.pill-m{color:var(--accent2);border-color:rgba(123,108,255,.4);background:var(--ac-bg);cursor:pointer;transition:.2s}
-.pill-m:hover{background:rgba(123,108,255,.22)}
-.pill-m.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pb-1{background:var(--gn-bg);border:1px solid rgba(0,184,148,.35);color:var(--green)}
+.pb-2{background:var(--ac-bg);border:1px solid rgba(108,92,231,.4);color:var(--accent2)}
+.ph-dot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-/* LAYOUT */
-.workspace{display:flex;flex:1;overflow:hidden;height:calc(100vh - 57px)}
+/* ── LAYOUT ── */
+.app{display:flex;flex:1;overflow:hidden}
 
-/* LEFT PANEL */
-.left-panel{
-  width:420px;flex-shrink:0;
+/* ── LEFT SIDEBAR — EDITOR ── */
+.sidebar{
+  width:380px;flex-shrink:0;
   display:flex;flex-direction:column;
   border-right:1px solid var(--border);
   background:var(--s1);
 }
-.panel-hdr{
-  display:flex;align-items:center;gap:8px;
-  padding:10px 16px;
-  border-bottom:1px solid var(--border);
-  flex-shrink:0;
+.pane-hdr{
+  display:flex;align-items:center;gap:8px;padding:8px 14px;
+  border-bottom:1px solid var(--border);flex-shrink:0;
 }
-.panel-hdr-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3)}
-.dot{width:7px;height:7px;border-radius:50%}
-.dot-purple{background:var(--accent)}
-.dot-green{background:var(--green)}
-.dot-teal{background:var(--teal)}
-.dot-amber{background:var(--amber)}
-.dot-red{background:var(--red)}
+.pane-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.3px;color:var(--text3)}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 
-.editor-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
-.line-nums{
-  position:absolute;left:0;top:0;bottom:0;width:40px;
-  background:var(--bg);border-right:1px solid var(--border);
-  padding:14px 0;overflow:hidden;pointer-events:none;z-index:1;
+.samples{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.sample-btn{
+  flex:1;padding:7px 4px;text-align:center;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
+  color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;
+  transition:.15s;background:none;border-top:none;border-left:none;border-right:none;
+  font-family:var(--sans);
 }
-.line-num{
-  height:21px;line-height:21px;
-  text-align:right;padding-right:10px;
-  font-family:var(--mono);font-size:11px;color:var(--text3);
+.sample-btn:hover{color:var(--text2)}
+.sample-btn.active{color:var(--accent2);border-bottom-color:var(--accent)}
+
+.editor-area{flex:1;display:flex;position:relative;overflow:hidden;min-height:0}
+.ln-col{
+  width:38px;flex-shrink:0;background:var(--bg);
+  border-right:1px solid var(--border);
+  padding:13px 0;overflow:hidden;pointer-events:none;
 }
-#code-input{
+.ln{height:20px;line-height:20px;text-align:right;padding-right:8px;
+  font-family:var(--mono);font-size:11px;color:var(--text3)}
+textarea#src{
   flex:1;resize:none;border:none;outline:none;
   background:transparent;color:var(--text);
-  font-family:var(--mono);font-size:13px;line-height:21px;
-  padding:14px 14px 14px 54px;
-  caret-color:var(--accent);
-  tab-size:2;
+  font-family:var(--mono);font-size:12.5px;line-height:20px;
+  padding:13px 12px;caret-color:var(--accent);tab-size:2;
 }
-#code-input::selection{background:rgba(123,108,255,.3)}
-#code-input::placeholder{color:var(--text3)}
+textarea#src::selection{background:var(--ac-bg2)}
+textarea#src::placeholder{color:var(--text3)}
 
 .action-bar{
-  padding:10px 16px;border-top:1px solid var(--border);
-  display:flex;gap:8px;align-items:center;flex-shrink:0;
+  padding:9px 14px;border-top:1px solid var(--border);
+  display:flex;gap:7px;align-items:center;flex-shrink:0;
 }
 .btn{
-  font-family:var(--sans);font-size:12px;font-weight:600;
-  padding:7px 16px;border-radius:7px;border:none;cursor:pointer;
-  transition:.15s;
+  font-family:var(--sans);font-size:11px;font-weight:700;
+  padding:6px 14px;border-radius:6px;border:none;cursor:pointer;transition:.15s;
+  letter-spacing:.3px;
 }
-.btn-primary{
-  background:var(--accent);color:#fff;
-}
-.btn-primary:hover{background:var(--accent2)}
-.btn-primary:active{transform:scale(.97)}
-.btn-ghost{
-  background:transparent;color:var(--text2);
-  border:1px solid var(--border2);
-}
+.btn-run{background:var(--accent);color:#fff}
+.btn-run:hover{background:var(--accent2);color:var(--bg)}
+.btn-run:active{transform:scale(.97)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2)}
 .btn-ghost:hover{background:var(--s3);color:var(--text)}
-.stat-chip{
-  margin-left:auto;font-family:var(--mono);font-size:11px;
-  color:var(--text3);
+.char-stat{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text3)}
+.char-stat b{color:var(--text2)}
+
+/* ── CENTER — TOKENS ── */
+.col-tokens{
+  width:300px;flex-shrink:0;display:flex;flex-direction:column;
+  border-right:1px solid var(--border);background:var(--s1);
 }
-.stat-chip span{color:var(--accent2);font-weight:700}
-
-/* MODE TABS */
-.mode-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-.mode-tab{
-  flex:1;padding:9px;text-align:center;
-  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;
-  color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;
-  transition:.15s;
-}
-.mode-tab:hover{color:var(--text2)}
-.mode-tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
-
-/* RIGHT PANEL */
-.right-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
-
-/* TOKEN TABLE */
-.table-wrap{flex:1;overflow-y:auto;overflow-x:hidden}
-.table-wrap::-webkit-scrollbar{width:5px}
-.table-wrap::-webkit-scrollbar-track{background:transparent}
-.table-wrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
-
-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
-thead{position:sticky;top:0;z-index:2}
-thead tr{background:var(--s2);border-bottom:1px solid var(--border)}
-th{
-  padding:9px 14px;text-align:left;
-  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;
-  color:var(--text3);
-}
-tbody tr{border-bottom:1px solid var(--border);transition:.1s}
+.tok-scroll{flex:1;overflow-y:auto;overflow-x:hidden}
+.tok-scroll::-webkit-scrollbar{width:3px}
+.tok-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px}
+thead{position:sticky;top:0;background:var(--s2);z-index:2}
+th{padding:7px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);border-bottom:1px solid var(--border)}
+tbody tr{border-bottom:1px solid var(--border);transition:.08s}
 tbody tr:hover{background:var(--s2)}
-td{padding:7px 14px;vertical-align:middle}
-.td-num{color:var(--text3);width:44px;text-align:center}
-.td-line{color:var(--text3);width:50px;text-align:center}
-.td-lexeme{color:var(--text);font-weight:500}
-.td-type{}
-.type-badge{
-  display:inline-block;
-  font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;
-  text-transform:uppercase;letter-spacing:.5px;
+td{padding:5px 10px;vertical-align:middle}
+.td-n{color:var(--text3);width:30px;text-align:center}
+.td-ln{color:var(--text3);width:30px;text-align:center}
+.badge{
+  display:inline-block;font-size:9px;font-weight:700;
+  padding:1.5px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px;
 }
+.bkw{color:var(--accent2);background:var(--ac-bg)}
+.bid{color:var(--teal);background:var(--tl-bg)}
+.bnu{color:var(--amber);background:var(--am-bg)}
+.bst{color:var(--pink);background:var(--pk-bg)}
+.bas{color:var(--green);background:var(--gn-bg)}
+.bop{color:var(--blue);background:var(--bl-bg)}
+.bsy{color:var(--text2);background:var(--s3)}
+.bcm{color:var(--text3);background:var(--s2)}
+.ber{color:var(--red);background:var(--rd-bg)}
 
-/* BADGE COLORS */
-.tb-keyword{color:var(--accent2);background:var(--ac-bg)}
-.tb-identifier{color:var(--teal);background:var(--tl-bg)}
-.tb-number{color:var(--amber);background:var(--am-bg)}
-.tb-string{color:var(--pink);background:var(--pk-bg)}
-.tb-assign{color:var(--green);background:var(--gn-bg)}
-.tb-operator{color:var(--blue);background:var(--bl-bg)}
-.tb-symbol{color:var(--text2);background:var(--s3)}
-.tb-comment{color:var(--text3);background:var(--s2);font-style:italic}
-.tb-error{color:var(--red);background:var(--rd-bg)}
-.tb-bool{color:#f472b6;background:rgba(244,114,182,.1)}
+/* ── RIGHT — PARSE TREE ── */
+.col-tree{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.tree-toolbar{
+  display:flex;align-items:center;gap:8px;padding:8px 14px;
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.tree-scroll{flex:1;overflow:auto;padding:20px}
+.tree-scroll::-webkit-scrollbar{width:5px;height:5px}
+.tree-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 
-/* EMPTY / PLACEHOLDER */
+/* ── PARSE TREE NODES ── */
+.tree{font-family:var(--mono);font-size:11.5px}
+.tree ul{list-style:none;padding-left:20px;position:relative}
+.tree ul::before{
+  content:'';position:absolute;left:8px;top:0;bottom:0;
+  border-left:1px solid var(--border2);
+}
+.tree li{position:relative;padding:1px 0}
+.tree li::before{
+  content:'';position:absolute;left:-12px;top:10px;
+  width:12px;border-top:1px solid var(--border2);
+}
+.tree > ul::before{display:none}
+.tree > ul > li::before{display:none}
+.node{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 8px;border-radius:5px;cursor:default;
+  transition:.1s;user-select:none;
+}
+.node:hover{filter:brightness(1.15)}
+.n-program{background:rgba(108,92,231,.2);border:1px solid rgba(108,92,231,.4);color:var(--accent2)}
+.n-stmt{background:rgba(0,206,201,.12);border:1px solid rgba(0,206,201,.3);color:var(--teal)}
+.n-expr{background:rgba(116,185,255,.1);border:1px solid rgba(116,185,255,.25);color:var(--blue)}
+.n-term{background:rgba(0,184,148,.1);border:1px solid rgba(0,184,148,.25);color:var(--green)}
+.n-factor{background:rgba(253,203,110,.1);border:1px solid rgba(253,203,110,.25);color:var(--amber)}
+.n-cond{background:rgba(232,67,147,.1);border:1px solid rgba(232,67,147,.25);color:var(--orange)}
+.n-terminal{background:var(--s3);border:1px solid var(--border2);color:var(--text2)}
+.n-keyword{background:var(--ac-bg);border:1px solid rgba(108,92,231,.3);color:var(--accent2)}
+.n-id{background:var(--tl-bg);border:1px solid rgba(0,206,201,.25);color:var(--teal)}
+.n-num{background:var(--am-bg);border:1px solid rgba(253,203,110,.25);color:var(--amber)}
+.n-op{background:var(--bl-bg);border:1px solid rgba(116,185,255,.2);color:var(--blue)}
+.n-error{background:var(--rd-bg);border:1px solid rgba(225,112,85,.4);color:var(--red)}
+.n-epsilon{color:var(--text3);font-style:italic;font-size:10px;padding:2px 6px}
+
+.node-icon{font-size:10px;opacity:.7}
+.expand-btn{
+  width:14px;height:14px;border-radius:3px;
+  background:var(--border2);border:none;cursor:pointer;
+  color:var(--text2);font-size:9px;display:inline-flex;align-items:center;justify-content:center;
+  margin-right:2px;transition:.1s;flex-shrink:0;
+}
+.expand-btn:hover{background:var(--border2);color:var(--text)}
+.collapsed > ul{display:none}
+
+/* ── STATUS BAR ── */
+.statusbar{
+  display:flex;align-items:center;gap:0;
+  height:26px;border-top:1px solid var(--border);
+  background:var(--s1);flex-shrink:0;font-family:var(--mono);font-size:10px;
+}
+.sb-item{
+  display:flex;align-items:center;gap:5px;
+  padding:0 12px;height:100%;border-right:1px solid var(--border);
+  color:var(--text3);white-space:nowrap;
+}
+.sb-item.ok{color:var(--green)}
+.sb-item.err{color:var(--red)}
+.sb-val{font-weight:700;color:var(--text2)}
+.sb-spacer{flex:1}
+
+/* ── PLACEHOLDER ── */
 .placeholder{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  height:100%;gap:12px;color:var(--text3);
+  height:100%;gap:10px;color:var(--text3);padding:30px;text-align:center;
 }
-.ph-icon{width:48px;height:48px;opacity:.3}
-.ph-text{font-size:13px}
-.ph-sub{font-size:11px;font-family:var(--mono);opacity:.7}
+.placeholder svg{width:44px;height:44px;opacity:.2}
+.ph-t{font-size:12px;color:var(--text2)}
+.ph-s{font-size:10px;font-family:var(--mono);opacity:.6;line-height:1.6}
 
-/* STATS BAR */
-.stats-bar{
-  padding:8px 16px;border-top:1px solid var(--border);
-  display:flex;gap:16px;align-items:center;
-  background:var(--s1);flex-shrink:0;flex-wrap:wrap;
+/* ── ERRORS PANEL ── */
+.errs-panel{border-top:1px solid var(--border);max-height:100px;overflow-y:auto;flex-shrink:0}
+.errs-panel:empty{display:none}
+.err-row{
+  display:flex;align-items:flex-start;gap:8px;
+  padding:5px 12px;border-bottom:1px solid var(--border);
+  font-family:var(--mono);font-size:11px;
 }
-.stat-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3)}
-.stat-label{}
-.stat-val{font-family:var(--mono);font-weight:700}
-.sv-total{color:var(--text2)}
-.sv-kw{color:var(--accent2)}
-.sv-id{color:var(--teal)}
-.sv-num{color:var(--amber)}
-.sv-str{color:var(--pink)}
-.sv-op{color:var(--blue)}
-.sv-err{color:var(--red)}
+.err-icon{color:var(--red);flex-shrink:0;margin-top:1px}
+.err-phase{
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+  padding:1px 5px;border-radius:3px;flex-shrink:0;margin-top:1px;
+}
+.ep-lex{background:var(--or-bg);color:var(--orange)}
+.ep-syn{background:var(--rd-bg);color:var(--red)}
+.err-msg{color:var(--text2);flex:1;line-height:1.4}
+.err-loc{color:var(--text3);flex-shrink:0;margin-top:1px}
 
-/* ERRORS PANEL */
-.errors-panel{
-  border-top:1px solid var(--border);
-  max-height:120px;overflow-y:auto;flex-shrink:0;
-}
-.errors-panel:empty{display:none}
-.error-row{
-  display:flex;align-items:center;gap:10px;
-  padding:6px 16px;border-bottom:1px solid var(--border);
-  font-size:12px;font-family:var(--mono);
-}
-.err-icon{color:var(--red);flex-shrink:0}
-.err-msg{color:var(--red)}
-.err-pos{color:var(--text3);margin-left:auto}
+/* ── RESIZER ── */
+.resizer{width:3px;background:var(--border);cursor:col-resize;flex-shrink:0;transition:.1s}
+.resizer:hover,.resizer.dragging{background:var(--accent)}
 
-/* DFA STATE VIZ */
-.dfa-trace{
-  border-top:1px solid var(--border);
-  padding:10px 16px;flex-shrink:0;
-  font-size:11px;font-family:var(--mono);
-  color:var(--text3);overflow-x:auto;white-space:nowrap;
+/* ── TOOLTIP ── */
+[data-tip]{position:relative}
+[data-tip]:hover::after{
+  content:attr(data-tip);position:absolute;bottom:calc(100%+5px);left:50%;
+  transform:translateX(-50%);background:var(--s4);color:var(--text);
+  border:1px solid var(--border2);font-size:10px;font-family:var(--mono);
+  padding:3px 7px;border-radius:4px;white-space:nowrap;pointer-events:none;z-index:99;
 }
-.dfa-trace:empty{display:none}
-.state-chip{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:28px;height:28px;border-radius:50%;
-  border:1.5px solid var(--border2);font-size:10px;font-weight:700;
-  color:var(--text2);margin:0 2px;vertical-align:middle;
-  background:var(--s2);
-}
-.state-chip.accept{border-color:var(--green);color:var(--green);background:var(--gn-bg)}
-.state-chip.active{border-color:var(--accent);color:var(--accent);background:var(--ac-bg)}
-.arrow{color:var(--text3);margin:0 2px;vertical-align:middle}
 
-/* SCROLLBAR */
-.left-panel::-webkit-scrollbar,.right-panel::-webkit-scrollbar{display:none}
-
-/* RESIZER */
-.resizer{
-  width:4px;background:var(--border);cursor:col-resize;flex-shrink:0;
-  transition:.1s;
-}
-.resizer:hover{background:var(--accent)}
-
-/* TOOLTIP */
-.tooltip{position:relative}
-.tooltip:hover::after{
-  content:attr(data-tip);
-  position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
-  background:var(--s3);color:var(--text);border:1px solid var(--border2);
-  font-size:11px;padding:4px 8px;border-radius:5px;white-space:nowrap;
-  pointer-events:none;z-index:99;
-}
+/* ── ANIMATIONS ── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.tree li{animation:fadeIn .15s ease both}
 </style>
 </head>
 <body>
 
 <header>
   <div class="logo">
-    <svg class="logo-icon" viewBox="0 0 24 24">
-      <polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/>
-      <line x1="12" y1="4" x2="12" y2="20"/>
-    </svg>
+    <svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
   </div>
-  <div>
-    <div class="hdr-title">Tiny Language — Lexical Analyzer</div>
+  <div class="hdr-meta">
+    <div class="hdr-title">miniL Compiler</div>
     <div class="hdr-sub">CS321 · El-Shorouk Academy</div>
   </div>
   <div class="hdr-right">
-    <span class="pill pill-m tooltip active" id="mode-regex" data-tip="Regex mode (Lab 2)" onclick="setMode('regex')">REGEX</span>
-    <span class="pill pill-m tooltip" id="mode-dfa" data-tip="DFA mode (Lab 3)" onclick="setMode('dfa')">DFA</span>
-    <span class="pill pill-v">TINY LANG</span>
+    <div class="phase-badge pb-1"><span class="ph-dot"></span>Phase 1: Scanner</div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+    <div class="phase-badge pb-2"><span class="ph-dot"></span>Phase 2: Parser</div>
   </div>
 </header>
 
-<div class="workspace">
-  <!-- LEFT: EDITOR -->
-  <div class="left-panel" id="left-panel">
-    <div class="panel-hdr">
-      <div class="dot dot-purple"></div>
-      <span class="panel-hdr-title">Source Code</span>
-    </div>
+<div class="app">
 
-    <div class="mode-tabs">
-      <div class="mode-tab active" onclick="loadSample('sample1')">Sample 1</div>
-      <div class="mode-tab" onclick="loadSample('sample2')">Sample 2</div>
-      <div class="mode-tab" onclick="loadSample('blank')">Blank</div>
+  <!-- ── EDITOR ── -->
+  <div class="sidebar" id="sidebar">
+    <div class="pane-hdr">
+      <div class="dot" style="background:var(--accent)"></div>
+      <span class="pane-label">Source Code</span>
     </div>
-
-    <div class="editor-wrap">
-      <div class="line-nums" id="line-nums"></div>
-      <textarea id="code-input" spellcheck="false"
-        placeholder="/* Write your Tiny Language code here */"
-        oninput="updateLineNums(); autoScan()"></textarea>
+    <div class="samples">
+      <button class="sample-btn active" onclick="loadSample(0,this)">Valid 1</button>
+      <button class="sample-btn" onclick="loadSample(1,this)">Valid 2</button>
+      <button class="sample-btn" onclick="loadSample(2,this)">Syn Error</button>
+      <button class="sample-btn" onclick="loadSample(3,this)">Blank</button>
     </div>
-
+    <div class="editor-area">
+      <div class="ln-col" id="lnc"></div>
+      <textarea id="src" spellcheck="false" placeholder="/* Write miniL code here */" oninput="onInput()"></textarea>
+    </div>
     <div class="action-bar">
-      <button class="btn btn-primary" onclick="scan()">&#9654;&nbsp; Scan</button>
+      <button class="btn btn-run" onclick="compile()">▶ Compile</button>
       <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
-      <span class="stat-chip" id="char-count">0 chars</span>
+      <span class="char-stat" id="cstat"><b>0</b> chars</span>
     </div>
   </div>
+  <div class="resizer" id="r1"></div>
 
-  <div class="resizer" id="resizer"></div>
-
-  <!-- RIGHT: OUTPUT -->
-  <div class="right-panel">
-    <div class="panel-hdr">
-      <div class="dot dot-green"></div>
-      <span class="panel-hdr-title" id="output-title">Token Stream</span>
-      <div style="margin-left:auto;display:flex;gap:8px">
-        <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="copyTokens()">Copy CSV</button>
-      </div>
+  <!-- ── TOKENS ── -->
+  <div class="col-tokens" id="coltok">
+    <div class="pane-hdr">
+      <div class="dot" style="background:var(--green)"></div>
+      <span class="pane-label">Token Stream</span>
+      <button class="btn btn-ghost" style="margin-left:auto;padding:3px 8px;font-size:9px" onclick="copyCSV()">CSV</button>
     </div>
-
-    <div class="table-wrap" id="table-wrap">
-      <div class="placeholder" id="placeholder">
-        <svg class="ph-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="9" x2="21" y2="9"/>
-          <line x1="9" y1="21" x2="9" y2="9"/>
-        </svg>
-        <div class="ph-text">No tokens yet</div>
-        <div class="ph-sub">Write code and press Scan</div>
+    <div class="tok-scroll">
+      <div class="placeholder" id="ph-tok">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        <div class="ph-t">No tokens yet</div>
+        <div class="ph-s">Write code · press Compile</div>
       </div>
-      <table id="token-table" style="display:none">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Line</th>
-            <th>Lexeme</th>
-            <th>Token Type</th>
-          </tr>
-        </thead>
-        <tbody id="token-body"></tbody>
+      <table id="ttable" style="display:none">
+        <thead><tr><th>#</th><th>Ln</th><th>Lexeme</th><th>Type</th></tr></thead>
+        <tbody id="tbody"></tbody>
       </table>
     </div>
+    <div class="errs-panel" id="errs-lex"></div>
+  </div>
+  <div class="resizer" id="r2"></div>
 
-    <div class="errors-panel" id="errors-panel"></div>
-
-    <div class="dfa-trace" id="dfa-trace"></div>
-
-    <div class="stats-bar" id="stats-bar" style="display:none">
-      <div class="stat-item"><span class="stat-label">Total</span><span class="stat-val sv-total" id="st-total">0</span></div>
-      <div class="stat-item"><div class="dot dot-purple" style="width:6px;height:6px"></div><span class="stat-val sv-kw" id="st-kw">0</span><span class="stat-label">keywords</span></div>
-      <div class="stat-item"><div class="dot dot-teal" style="width:6px;height:6px"></div><span class="stat-val sv-id" id="st-id">0</span><span class="stat-label">identifiers</span></div>
-      <div class="stat-item"><div class="dot dot-amber" style="width:6px;height:6px"></div><span class="stat-val sv-num" id="st-num">0</span><span class="stat-label">numbers</span></div>
-      <div class="stat-item"><div class="dot" style="width:6px;height:6px;background:var(--pink)"></div><span class="stat-val sv-str" id="st-str">0</span><span class="stat-label">strings</span></div>
-      <div class="stat-item"><div class="dot" style="width:6px;height:6px;background:var(--red)"></div><span class="stat-val sv-err" id="st-err">0</span><span class="stat-label">errors</span></div>
+  <!-- ── PARSE TREE ── -->
+  <div class="col-tree">
+    <div class="pane-hdr tree-toolbar">
+      <div class="dot" style="background:var(--accent2)"></div>
+      <span class="pane-label">Parse Tree</span>
+      <button class="btn btn-ghost" style="margin-left:auto;padding:3px 8px;font-size:9px" onclick="toggleAll(true)">Expand All</button>
+      <button class="btn btn-ghost" style="padding:3px 8px;font-size:9px" onclick="toggleAll(false)">Collapse</button>
     </div>
+    <div class="tree-scroll" id="tree-scroll">
+      <div class="placeholder" id="ph-tree">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="12"/><circle cx="6" cy="16" r="2"/><circle cx="18" cy="16" r="2"/><line x1="12" y1="12" x2="6" y2="14"/><line x1="12" y1="12" x2="18" y2="14"/></svg>
+        <div class="ph-t">Parse tree will appear here</div>
+        <div class="ph-s">Run the compiler to see<br>the recursive-descent parse tree</div>
+      </div>
+      <div class="tree" id="tree-root"></div>
+    </div>
+    <div class="errs-panel" id="errs-syn"></div>
   </div>
 </div>
 
+<div class="statusbar">
+  <div class="sb-item" id="sb-phase">Phase 2 · Parser Ready</div>
+  <div class="sb-item"><span class="sb-val" id="sb-tok">0</span> tokens</div>
+  <div class="sb-item"><span class="sb-val" id="sb-kw">0</span> keywords</div>
+  <div class="sb-item"><span class="sb-val" id="sb-id">0</span> identifiers</div>
+  <div class="sb-item"><span class="sb-val" id="sb-num">0</span> numbers</div>
+  <div class="sb-item"><span class="sb-val" id="sb-errc">0</span> errors</div>
+  <div class="sb-spacer"></div>
+  <div class="sb-item">miniL · CFG v1.0</div>
+</div>
+
 <script>
-/* ═══════════════════════════════════════════════════
-   TINY LANGUAGE DEFINITION
-   ═══════════════════════════════════════════════════ */
-const KEYWORDS = new Set([
-  'int','float','string','read','write','repeat','until',
-  'if','elseif','else','then','return','endl','main'
-]);
-
-/* ═══════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════
    SAMPLES
-   ═══════════════════════════════════════════════════ */
-const SAMPLES = {
-  sample1: `/* Sample: factorial */
-int main()
-{
-  int x;
-  read x;
-  if x > 0 then
-    int fact := 1;
-    repeat
-      fact := fact * x;
-      x := x - 1;
-    until x = 0
-    write fact;
-  end
-  return 0;
-}`,
-  sample2: `/* Sample: sum function */
-int sum(int a, int b)
-{
-  return a + b;
-}
-int main()
-{
-  int val, counter;
-  read val;
-  counter := 0;
-  float z1 := 3*2*(2+1)/2-5.3;
-  z1 := z1 + sum(1,val);
-  if z1 > 5 || z1 < counter then
-    write z1;
-  elseif z1 < 5 then
-    z1 := 5;
-  else
-    z1 := counter;
-  end
-  write "Result = ";
-  write z1;
-  write endl;
-  return 0;
-}`,
-  blank: ''
-};
+═══════════════════════════════════════════════ */
+const SAMPLES = [
+`x := 5 + 3 * 2;
+y := x - 1;
+check x > 0 then
+  y := y + 1;
+end`,
 
-/* ═══════════════════════════════════════════════════
-   STATE
-   ═══════════════════════════════════════════════════ */
-let currentMode = 'regex';
-let tokens = [];
-let autoScanTimer = null;
+`x := 10;
+repeat
+  x := x - 1;
+until x = 0`,
 
-/* ═══════════════════════════════════════════════════
-   MODE
-   ═══════════════════════════════════════════════════ */
-function setMode(m) {
-  currentMode = m;
-  document.getElementById('mode-regex').classList.toggle('active', m==='regex');
-  document.getElementById('mode-dfa').classList.toggle('active', m==='dfa');
-  document.getElementById('output-title').textContent = m === 'dfa' ? 'Token Stream (DFA)' : 'Token Stream (Regex)';
-  document.getElementById('dfa-trace').style.display = m === 'dfa' ? '' : 'none';
-  if (document.getElementById('code-input').value.trim()) scan();
-}
+`check x > 0 then
+  5 := y;
+end`,
 
-/* ═══════════════════════════════════════════════════
-   REGEX SCANNER — covers all 31 Tiny Language rules
-   ═══════════════════════════════════════════════════ */
-function regexScan(src) {
-  const results = [];
-  // Master pattern — ORDER MATTERS (keywords before identifiers, := before :, == before =)
-  const masterPattern = [
-    { re: /\/\*[\s\S]*?\*\//g,          type: 'COMMENT' },
-    { re: /"([^"\\]|\\.)*"/g,           type: 'STRING' },
-    { re: /\b(int|float|string|read|write|repeat|until|if|elseif|else|then|return|endl|main)\b/g, type: 'KEYWORD' },
-    { re: /[a-zA-Z][a-zA-Z0-9]*/g,      type: 'IDENTIFIER' },
-    { re: /\d+\.\d+/g,                  type: 'NUMBER' },
-    { re: /\d+/g,                        type: 'NUMBER' },
-    { re: /:=/g,                         type: 'ASSIGN_OP' },
-    { re: /<>/g,                         type: 'NOT_EQUAL_OP' },
-    { re: /&&/g,                         type: 'AND_OP' },
-    { re: /\|\|/g,                       type: 'OR_OP' },
-    { re: /\+/g,                         type: 'PLUS_OP' },
-    { re: /-/g,                          type: 'MINUS_OP' },
-    { re: /\*/g,                         type: 'MULT_OP' },
-    { re: /\//g,                         type: 'DIV_OP' },
-    { re: /</g,                          type: 'LT_OP' },
-    { re: />/g,                          type: 'GT_OP' },
-    { re: /=/g,                          type: 'EQ_OP' },
-    { re: /;/g,                          type: 'SEMICOLON' },
-    { re: /,/g,                          type: 'COMMA' },
-    { re: /\(/g,                         type: 'LEFT_PAREN' },
-    { re: /\)/g,                         type: 'RIGHT_PAREN' },
-    { re: /\{/g,                         type: 'LEFT_BRACE' },
-    { re: /\}/g,                         type: 'RIGHT_BRACE' },
-  ].map(({re,type})=>({re:new RegExp(re.source,'g'),type}));
+``
+];
 
-  // Build line-start index for line number calculation
+/* ═══════════════════════════════════════════════
+   KEYWORDS & TOKEN TYPES
+═══════════════════════════════════════════════ */
+const KEYWORDS = new Set(['check','then','otherwise','repeat','until','end']);
+
+/* ═══════════════════════════════════════════════
+   LEXER  (Phase 1 — feeds parser)
+═══════════════════════════════════════════════ */
+function lex(src) {
+  const tokens = [], errors = [];
   const lineStarts = [0];
-  for (let i = 0; i < src.length; i++) {
-    if (src[i] === '\n') lineStarts.push(i + 1);
-  }
+  for (let i = 0; i < src.length; i++) if (src[i]==='\n') lineStarts.push(i+1);
   const getLine = pos => {
-    let lo = 0, hi = lineStarts.length - 1;
-    while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
-      if (lineStarts[mid] <= pos) lo = mid; else hi = mid - 1;
-    }
-    return lo + 1;
-  };
-
-  // Collect all matches
-  const all = [];
-  for (const {re, type} of masterPattern) {
-    re.lastIndex = 0;
-    let m;
-    while ((m = re.exec(src)) !== null) {
-      all.push({ start: m.index, end: m.index + m[0].length, lexeme: m[0], type });
-    }
-  }
-
-  // Sort by position; break ties by priority (longer match wins, else first defined)
-  all.sort((a, b) => a.start !== b.start ? a.start - b.start : (b.end - b.start) - (a.end - a.start));
-
-  // Greedy non-overlapping selection
-  let cursor = 0;
-  let idx = 1;
-  for (const tok of all) {
-    if (tok.start < cursor) continue;
-    // Check for unknown chars between cursor and this token
-    const gap = src.slice(cursor, tok.start).replace(/\s/g, '');
-    if (gap.length > 0) {
-      // Report unknowns char by char
-      let pos = cursor;
-      for (const ch of src.slice(cursor, tok.start)) {
-        if (!/\s/.test(ch)) {
-          results.push({ n: idx++, line: getLine(pos), lexeme: ch, type: 'ERROR', raw: 'LEXICAL_ERROR' });
-        }
-        pos++;
-      }
-    }
-    // Classify keyword vs identifier
-    let type = tok.type;
-    if (type === 'IDENTIFIER' && KEYWORDS.has(tok.lexeme)) type = 'KEYWORD';
-    results.push({ n: idx++, line: getLine(tok.start), lexeme: tok.lexeme, type, raw: tok.lexeme });
-    cursor = tok.end;
-  }
-  // Trailing unknowns
-  const tail = src.slice(cursor).replace(/\s/g, '');
-  if (tail.length > 0) {
-    let pos = cursor;
-    for (const ch of src.slice(cursor)) {
-      if (!/\s/.test(ch)) results.push({ n: idx++, line: getLine(pos), lexeme: ch, type: 'ERROR', raw: 'LEXICAL_ERROR' });
-      pos++;
-    }
-  }
-
-  return results;
-}
-
-/* ═══════════════════════════════════════════════════
-   DFA SCANNER — character-by-character state machine
-   Covers: identifiers/keywords, integers, floats,
-   strings, comments, all operators & symbols
-   ═══════════════════════════════════════════════════ */
-function dfaScan(src) {
-  const results = [];
-  const traceSteps = [];
-
-  const input = src + ' '; // sentinel
-  let state = 0;
-  let lexeme = '';
-  let lexStart = 0;
-
-  const lineStarts = [0];
-  for (let i = 0; i < src.length; i++) if (src[i] === '\n') lineStarts.push(i + 1);
-  const getLine = pos => {
-    let lo = 0, hi = lineStarts.length - 1;
-    while (lo < hi) { const mid = (lo+hi+1)>>1; if(lineStarts[mid]<=pos) lo=mid; else hi=mid-1; } return lo+1;
-  };
-
-  let idx = 1;
-  const emit = (lex, type, pos) => {
-    if (!lex) return;
-    let t = type;
-    if (type === 'IDENTIFIER' && KEYWORDS.has(lex)) t = 'KEYWORD';
-    results.push({ n: idx++, line: getLine(pos - lex.length), lexeme: lex, type: t });
+    let lo=0,hi=lineStarts.length-1;
+    while(lo<hi){const m=(lo+hi+1)>>1;lineStarts[m]<=pos?lo=m:hi=m-1}return lo+1;
   };
 
   let i = 0;
-  while (i < input.length) {
-    const ch = input[i];
-    const isLetter = /[a-zA-Z]/.test(ch);
-    const isDigit = /[0-9]/.test(ch);
-    const isLetterOrDigit = /[a-zA-Z0-9]/.test(ch);
-    const isWS = /\s/.test(ch);
-
-    if (traceSteps.length < 60) traceSteps.push({ state, ch: ch === '\n' ? '\\n' : ch });
-
-    switch (state) {
-      case 0: // START
-        lexeme = '';
-        lexStart = i;
-        if (isWS) { i++; break; }
-        if (isLetter) { state = 1; lexeme += ch; i++; break; }
-        if (isDigit) { state = 2; lexeme += ch; i++; break; }
-        if (ch === ':') { state = 3; lexeme += ch; i++; break; }
-        if (ch === '<') { state = 10; lexeme += ch; i++; break; }
-        if (ch === '>') { emit('>', 'GT_OP', i+1); i++; break; }
-        if (ch === '=') { emit('=', 'EQ_OP', i+1); i++; break; }
-        if (ch === '&') { state = 11; lexeme += ch; i++; break; }
-        if (ch === '|') { state = 12; lexeme += ch; i++; break; }
-        if (ch === '"') { state = 5; lexeme += ch; i++; break; }
-        if (ch === '/' && input[i+1] === '*') { state = 6; lexeme += ch; i++; break; }
-        if (ch === '/') { emit('/', 'DIV_OP', i+1); i++; break; }
-        if (ch === '+') { emit('+', 'PLUS_OP', i+1); i++; break; }
-        if (ch === '-') { emit('-', 'MINUS_OP', i+1); i++; break; }
-        if (ch === '*') { emit('*', 'MULT_OP', i+1); i++; break; }
-        if (ch === ';') { emit(';', 'SEMICOLON', i+1); i++; break; }
-        if (ch === ',') { emit(',', 'COMMA', i+1); i++; break; }
-        if (ch === '(') { emit('(', 'LEFT_PAREN', i+1); i++; break; }
-        if (ch === ')') { emit(')', 'RIGHT_PAREN', i+1); i++; break; }
-        if (ch === '{') { emit('{', 'LEFT_BRACE', i+1); i++; break; }
-        if (ch === '}') { emit('}', 'RIGHT_BRACE', i+1); i++; break; }
-        if (i < src.length) { emit(ch, 'ERROR', i+1); i++; break; }
-        i++; break;
-
-      case 1: // IDENTIFIER
-        if (isLetterOrDigit) { lexeme += ch; i++; }
-        else { emit(lexeme, 'IDENTIFIER', i); state = 0; }
-        break;
-
-      case 2: // NUMBER (integer or float)
-        if (isDigit) { lexeme += ch; i++; }
-        else if (ch === '.' && /[0-9]/.test(input[i+1])) { state = 20; lexeme += ch; i++; }
-        else { emit(lexeme, 'NUMBER', i); state = 0; }
-        break;
-
-      case 20: // FLOAT after decimal point
-        if (isDigit) { lexeme += ch; i++; }
-        else { emit(lexeme, 'NUMBER', i); state = 0; }
-        break;
-
-      case 3: // After ':'
-        if (ch === '=') { lexeme += ch; emit(lexeme, 'ASSIGN_OP', i+1); state = 0; i++; }
-        else { emit(':', 'ERROR', i); state = 0; }
-        break;
-
-      case 5: // STRING — inside double quotes
-        lexeme += ch; i++;
-        if (ch === '"' && lexeme.length > 1) { emit(lexeme, 'STRING', i); state = 0; }
-        else if (ch === '\n') { emit(lexeme, 'ERROR', i); state = 0; }
-        break;
-
-      case 6: // COMMENT — inside /* */
-        lexeme += ch; i++;
-        if (ch === '*' && input[i] === '/') { lexeme += '/'; i++; emit(lexeme, 'COMMENT', i); state = 0; }
-        break;
-
-      case 10: // After '<'
-        if (ch === '>') { emit('<>', 'NOT_EQUAL_OP', i+1); state = 0; i++; }
-        else { emit('<', 'LT_OP', i); state = 0; }
-        break;
-
-      case 11: // After '&'
-        if (ch === '&') { emit('&&', 'AND_OP', i+1); state = 0; i++; }
-        else { emit('&', 'ERROR', i); state = 0; }
-        break;
-
-      case 12: // After '|'
-        if (ch === '|') { emit('||', 'OR_OP', i+1); state = 0; i++; }
-        else { emit('|', 'ERROR', i); state = 0; }
-        break;
-
-      default: state = 0; i++;
+  while (i < src.length) {
+    const c = src[i];
+    // whitespace
+    if (/\s/.test(c)){i++;continue}
+    // comment
+    if (c==='/'&&src[i+1]==='*'){
+      let j=i+2,lex='/*';
+      while(j<src.length&&!(src[j-1]==='*'&&src[j]==='/')){lex+=src[j];j++}
+      lex+='*/';j++;
+      tokens.push({type:'COMMENT',val:lex,line:getLine(i)});i=j;continue;
     }
+    // string
+    if (c==='"'){
+      let j=i+1,lex='"';
+      while(j<src.length&&src[j]!=='"'&&src[j]!=='\n'){lex+=src[j];j++}
+      if(src[j]==='"'){lex+='"';j++}
+      tokens.push({type:'STRING',val:lex,line:getLine(i)});i=j;continue;
+    }
+    // identifier / keyword
+    if(/[a-zA-Z_]/.test(c)){
+      let j=i,lex='';
+      while(j<src.length&&/[a-zA-Z0-9_]/.test(src[j])){lex+=src[j];j++}
+      tokens.push({type:KEYWORDS.has(lex)?'KEYWORD':'IDENTIFIER',val:lex,line:getLine(i)});
+      i=j;continue;
+    }
+    // number
+    if(/[0-9]/.test(c)){
+      let j=i,lex='';
+      while(j<src.length&&/[0-9]/.test(src[j])){lex+=src[j];j++}
+      if(src[j]==='.'&&/[0-9]/.test(src[j+1])){lex+='.';j++;while(j<src.length&&/[0-9]/.test(src[j])){lex+=src[j];j++}}
+      tokens.push({type:'NUMBER',val:lex,line:getLine(i)});i=j;continue;
+    }
+    // := 
+    if(c===':'&&src[i+1]==='='){tokens.push({type:'ASSIGN',val:':=',line:getLine(i)});i+=2;continue}
+    // !=
+    if(c==='!'&&src[i+1]==='='){tokens.push({type:'RELOP',val:'!=',line:getLine(i)});i+=2;continue}
+    // single-char
+    const singles = {'+':'PLUS','-':'MINUS','*':'MULT','/':'DIV',
+      '<':'RELOP','>':'RELOP','=':'RELOP',
+      ';':'SEMICOLON',',':'COMMA','(':'LPAREN',')':'RPAREN','{':'LBRACE','}':'RBRACE'};
+    if(singles[c]){tokens.push({type:singles[c],val:c,line:getLine(i)});i++;continue}
+    // error
+    errors.push({line:getLine(i),msg:`Unexpected character '${c}'`,phase:'lex'});
+    i++;
+  }
+  return {tokens,errors};
+}
+
+/* ═══════════════════════════════════════════════
+   PARSER  — Recursive Descent for miniL CFG
+   
+   CFG:
+   Program    → Statements
+   Statements → Statement State
+   State      → ; Statements | ε
+   Statement  → AssignStmt | CheckStmt | RepeatStmt
+   AssignStmt → identifier := Expression
+   CheckStmt  → check Condition then Statements OtherwisePart end
+   OtherwisePart → otherwise Statements | ε
+   RepeatStmt → repeat Statements until Condition
+   Condition  → Expression RelOp Expression
+   RelOp      → < | > | = | !=
+   Expression → Term ExpTail
+   ExpTail    → + Term ExpTail | - Term ExpTail | ε
+   Term       → Factor TermTail
+   TermTail   → * Factor TermTail | / Factor TermTail | ε
+   Factor     → identifier | number | ( Expression )
+═══════════════════════════════════════════════ */
+function parse(tokens) {
+  const errors = [];
+  // filter out comments
+  const toks = tokens.filter(t=>t.type!=='COMMENT');
+  let pos = 0;
+
+  const peek    = () => toks[pos];
+  const peekVal = () => toks[pos]?.val;
+  const peekType= () => toks[pos]?.type;
+  const atEnd   = () => pos >= toks.length;
+
+  function consume(typeOrVal, label) {
+    if (atEnd()) {
+      errors.push({line:'EOF',msg:`Expected ${label || typeOrVal} but reached end of input`,phase:'syn'});
+      return null;
+    }
+    const t = toks[pos];
+    if (t.type===typeOrVal || t.val===typeOrVal) { pos++; return t; }
+    errors.push({line:t.line,msg:`Expected '${label||typeOrVal}' but found '${t.val}'`,phase:'syn'});
+    // skip ahead to recover
+    pos++;
+    return {type:'ERROR',val:t.val,line:t.line};
   }
 
-  renderDFATrace(traceSteps);
-  return results;
+  function node(label, cls, children=[], terminal=false, val='') {
+    return {label, cls, children, terminal, val};
+  }
+
+  /* Program → Statements */
+  function parseProgram() {
+    const stmts = parseStatements();
+    const n = node('Program','n-program',[stmts]);
+    return n;
+  }
+
+  /* Statements → Statement State */
+  function parseStatements() {
+    const children = [];
+    if (!atEnd() && !isStopToken()) {
+      children.push(parseStatement());
+      children.push(parseState());
+    } else {
+      children.push(node('ε','n-epsilon',[],true,'ε'));
+    }
+    return node('Statements','n-stmt',children);
+  }
+
+  /* State → ; Statements | ε */
+  function parseState() {
+    if (!atEnd() && peekType()==='SEMICOLON') {
+      const semi = consume('SEMICOLON',';');
+      const n = node('; Statements','n-stmt',[
+        node(';','n-terminal',[],true,';'),
+        parseStatements()
+      ]);
+      return n;
+    }
+    return node('ε','n-epsilon',[],true,'ε');
+  }
+
+  function isStopToken() {
+    const v = peekVal();
+    return v==='otherwise'||v==='until'||v==='end';
+  }
+
+  /* Statement → AssignStmt | CheckStmt | RepeatStmt */
+  function parseStatement() {
+    if (atEnd()) return node('⚠ Unexpected EOF','n-error',[],true,'EOF');
+    const t = peek();
+
+    if (t.val==='check')  return parseCheckStmt();
+    if (t.val==='repeat') return parseRepeatStmt();
+    if (t.type==='IDENTIFIER') return parseAssignStmt();
+
+    // error recovery
+    const err = node(`⚠ Invalid stmt start: '${t.val}'`,'n-error',[],true,t.val);
+    errors.push({line:t.line,msg:`Invalid statement start: '${t.val}' — expected identifier, 'check', or 'repeat'`,phase:'syn'});
+    pos++; // skip bad token
+    return err;
+  }
+
+  /* AssignStmt → identifier := Expression */
+  function parseAssignStmt() {
+    const id = consume('IDENTIFIER','identifier');
+    const asgn = consume('ASSIGN',':=');
+    const expr = parseExpression();
+    return node('AssignStmt','n-stmt',[
+      node(id?.val||'?','n-id',[],true,id?.val||'?'),
+      node(':=','n-terminal',[],true,':='),
+      expr
+    ]);
+  }
+
+  /* CheckStmt → check Condition then Statements OtherwisePart end */
+  function parseCheckStmt() {
+    consume('KEYWORD','check');
+    const cond = parseCondition();
+    consume('KEYWORD','then');
+    const stmts = parseStatements();
+    const otherwise = parseOtherwisePart();
+    consume('KEYWORD','end');
+    return node('CheckStmt','n-stmt',[
+      node('check','n-keyword',[],true,'check'),
+      cond,
+      node('then','n-keyword',[],true,'then'),
+      stmts,
+      otherwise,
+      node('end','n-keyword',[],true,'end'),
+    ]);
+  }
+
+  /* OtherwisePart → otherwise Statements | ε */
+  function parseOtherwisePart() {
+    if (!atEnd() && peekVal()==='otherwise') {
+      consume('KEYWORD','otherwise');
+      return node('OtherwisePart','n-stmt',[
+        node('otherwise','n-keyword',[],true,'otherwise'),
+        parseStatements()
+      ]);
+    }
+    return node('OtherwisePart → ε','n-epsilon',[],true,'ε');
+  }
+
+  /* RepeatStmt → repeat Statements until Condition */
+  function parseRepeatStmt() {
+    consume('KEYWORD','repeat');
+    const stmts = parseStatements();
+    consume('KEYWORD','until');
+    const cond = parseCondition();
+    return node('RepeatStmt','n-stmt',[
+      node('repeat','n-keyword',[],true,'repeat'),
+      stmts,
+      node('until','n-keyword',[],true,'until'),
+      cond
+    ]);
+  }
+
+  /* Condition → Expression RelOp Expression */
+  function parseCondition() {
+    const left = parseExpression();
+    const relop = parseRelOp();
+    const right = parseExpression();
+    return node('Condition','n-cond',[left,relop,right]);
+  }
+
+  /* RelOp → < | > | = | != */
+  function parseRelOp() {
+    if (!atEnd() && peek().type==='RELOP') {
+      const t = toks[pos++];
+      return node(t.val,'n-op',[],true,t.val);
+    }
+    errors.push({line:peek()?.line||'?',msg:`Expected relational operator (<, >, =, !=) but found '${peekVal()||'EOF'}'`,phase:'syn'});
+    return node('⚠ Expected RelOp','n-error',[],true,'');
+  }
+
+  /* Expression → Term ExpTail */
+  function parseExpression() {
+    const term = parseTerm();
+    const tail = parseExpTail();
+    return node('Expression','n-expr',[term, tail]);
+  }
+
+  /* ExpTail → + Term ExpTail | - Term ExpTail | ε */
+  function parseExpTail() {
+    if (!atEnd() && (peekType()==='PLUS'||peekType()==='MINUS')) {
+      const op = toks[pos++];
+      return node('ExpTail','n-expr',[
+        node(op.val,'n-op',[],true,op.val),
+        parseTerm(),
+        parseExpTail()
+      ]);
+    }
+    return node('ExpTail → ε','n-epsilon',[],true,'ε');
+  }
+
+  /* Term → Factor TermTail */
+  function parseTerm() {
+    const factor = parseFactor();
+    const tail = parseTermTail();
+    return node('Term','n-term',[factor, tail]);
+  }
+
+  /* TermTail → * Factor TermTail | / Factor TermTail | ε */
+  function parseTermTail() {
+    if (!atEnd() && (peekType()==='MULT'||peekType()==='DIV')) {
+      const op = toks[pos++];
+      return node('TermTail','n-term',[
+        node(op.val,'n-op',[],true,op.val),
+        parseFactor(),
+        parseTermTail()
+      ]);
+    }
+    return node('TermTail → ε','n-epsilon',[],true,'ε');
+  }
+
+  /* Factor → identifier | number | ( Expression ) */
+  function parseFactor() {
+    if (atEnd()) {
+      errors.push({line:'EOF',msg:'Expected factor but reached end of input',phase:'syn'});
+      return node('⚠ EOF','n-error',[],true,'EOF');
+    }
+    const t = peek();
+    if (t.type==='IDENTIFIER') { pos++; return node(`Factor: ${t.val}`,'n-factor',[node(t.val,'n-id',[],true,t.val)]); }
+    if (t.type==='NUMBER')     { pos++; return node(`Factor: ${t.val}`,'n-factor',[node(t.val,'n-num',[],true,t.val)]); }
+    if (t.type==='LPAREN') {
+      pos++;
+      const expr = parseExpression();
+      consume('RPAREN',')');
+      return node('Factor: (…)','n-factor',[node('(','n-terminal',[],true,'('),expr,node(')','n-terminal',[],true,')')]);
+    }
+    errors.push({line:t.line,msg:`Expected identifier, number or '(' but found '${t.val}'`,phase:'syn'});
+    pos++;
+    return node(`⚠ Bad factor: '${t.val}'`,'n-error',[],true,t.val);
+  }
+
+  let tree = null;
+  try { tree = parseProgram(); } catch(e) { errors.push({line:'?',msg:`Internal parser error: ${e.message}`,phase:'syn'}); }
+  return {tree, errors};
 }
 
-/* ═══════════════════════════════════════════════════
-   DFA TRACE VISUALIZER
-   ═══════════════════════════════════════════════════ */
-const STATE_NAMES = {0:'q₀',1:'q₁',2:'q₂',3:'q₃',4:'q₄',5:'q₅',6:'q₆',
-  10:'q₁₀',11:'q₁₁',12:'q₁₂',20:'q₂₀'};
-const ACCEPT_STATES = new Set([0,1,2,4,5,6,20]);
+/* ═══════════════════════════════════════════════
+   RENDER — TOKEN TABLE
+═══════════════════════════════════════════════ */
+const BADGE = {
+  KEYWORD:'bkw',IDENTIFIER:'bid',NUMBER:'bnu',STRING:'bst',
+  ASSIGN:'bas',PLUS:'bop',MINUS:'bop',MULT:'bop',DIV:'bop',
+  RELOP:'bop',SEMICOLON:'bsy',COMMA:'bsy',
+  LPAREN:'bsy',RPAREN:'bsy',LBRACE:'bsy',RBRACE:'bsy',
+  COMMENT:'bcm',ERROR:'ber'
+};
+const FRIENDLY = {
+  KEYWORD:'Keyword',IDENTIFIER:'Identifier',NUMBER:'Number',STRING:'String',
+  ASSIGN:'Assign :=',PLUS:'+',MINUS:'-',MULT:'*',DIV:'/',
+  RELOP:'RelOp',SEMICOLON:';',COMMA:',',LPAREN:'(',RPAREN:')',
+  LBRACE:'{',RBRACE:'}',COMMENT:'Comment',ERROR:'Error'
+};
 
-function renderDFATrace(steps) {
-  const el = document.getElementById('dfa-trace');
-  if (currentMode !== 'dfa') { el.innerHTML=''; return; }
-  if (!steps.length) { el.innerHTML=''; return; }
-  const shown = steps.slice(0, 40);
-  let html = '<span style="color:var(--text3);font-size:10px;margin-right:8px">DFA TRACE:</span>';
-  shown.forEach(({state,ch},i) => {
-    const name = STATE_NAMES[state] || `q${state}`;
-    const cls = ACCEPT_STATES.has(state) ? 'accept' : '';
-    html += `<span class="state-chip ${cls}">${name}</span>`;
-    if (i < shown.length - 1) html += `<span class="arrow">${ch==' '?'⎵':ch==='\\n'?'↵':ch}→</span>`;
+function renderTokens(tokens) {
+  const ph = document.getElementById('ph-tok');
+  const tbl = document.getElementById('ttable');
+  const tbody = document.getElementById('tbody');
+  if (!tokens.length){ph.style.display='flex';tbl.style.display='none';return}
+  ph.style.display='none';tbl.style.display='table';
+  tbody.innerHTML = tokens.map((t,i)=>{
+    const lex = t.val.length>28 ? t.val.slice(0,28)+'…' : t.val;
+    const disp = t.type==='COMMENT'?'/* … */':esc(lex);
+    return `<tr>
+      <td class="td-n">${i+1}</td>
+      <td class="td-ln">${t.line}</td>
+      <td>${disp}</td>
+      <td><span class="badge ${BADGE[t.type]||'bsy'}">${FRIENDLY[t.type]||t.type}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   RENDER — PARSE TREE
+═══════════════════════════════════════════════ */
+let nodeCounter = 0;
+function renderTree(node) {
+  const ph = document.getElementById('ph-tree');
+  const root = document.getElementById('tree-root');
+  if (!node){ph.style.display='flex';root.innerHTML='';return}
+  ph.style.display='none';
+  nodeCounter = 0;
+  root.innerHTML = buildTreeHTML(node);
+  // attach expand listeners
+  root.querySelectorAll('.expand-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const li = btn.closest('li');
+      li.classList.toggle('collapsed');
+      btn.textContent = li.classList.contains('collapsed') ? '+' : '−';
+      e.stopPropagation();
+    });
   });
-  if (steps.length > 40) html += `<span style="color:var(--text3)"> +${steps.length-40} more</span>`;
-  el.innerHTML = html;
 }
 
-/* ═══════════════════════════════════════════════════
-   TOKEN TYPE → BADGE CLASS
-   ═══════════════════════════════════════════════════ */
-function badgeClass(type) {
-  const map = {
-    KEYWORD:'tb-keyword', IDENTIFIER:'tb-identifier',
-    NUMBER:'tb-number', STRING:'tb-string',
-    ASSIGN_OP:'tb-assign',
-    PLUS_OP:'tb-operator', MINUS_OP:'tb-operator',
-    MULT_OP:'tb-operator', DIV_OP:'tb-operator',
-    LT_OP:'tb-operator', GT_OP:'tb-operator',
-    EQ_OP:'tb-operator', NOT_EQUAL_OP:'tb-operator',
-    AND_OP:'tb-bool', OR_OP:'tb-bool',
-    SEMICOLON:'tb-symbol', COMMA:'tb-symbol',
-    LEFT_PAREN:'tb-symbol', RIGHT_PAREN:'tb-symbol',
-    LEFT_BRACE:'tb-symbol', RIGHT_BRACE:'tb-symbol',
-    COMMENT:'tb-comment', ERROR:'tb-error',
-  };
-  return map[type] || 'tb-symbol';
+function buildTreeHTML(n) {
+  if (!n) return '';
+  const id = `nd${nodeCounter++}`;
+  const hasKids = n.children && n.children.length > 0 && !n.terminal;
+  const expandBtn = hasKids ? `<button class="expand-btn" title="Toggle">−</button>` : '';
+
+  if (n.cls === 'n-epsilon') {
+    return `<ul><li><span class="node n-epsilon">ε</span></li></ul>`;
+  }
+
+  const labelHTML = `<span class="node ${n.cls}">${expandBtn}${esc(n.label)}</span>`;
+
+  if (n.terminal || !hasKids) {
+    return `<ul><li id="${id}">${labelHTML}</li></ul>`;
+  }
+
+  const childrenHTML = n.children.map(c => buildTreeHTML(c)).join('');
+  return `<ul><li id="${id}">${labelHTML}${childrenHTML}</li></ul>`;
 }
 
-function friendlyType(type) {
-  const map = {
-    KEYWORD:'Keyword', IDENTIFIER:'Identifier',
-    NUMBER:'Number', STRING:'String',
-    ASSIGN_OP:'Assign :=',
-    PLUS_OP:'+', MINUS_OP:'-', MULT_OP:'*', DIV_OP:'/',
-    LT_OP:'< (Less)', GT_OP:'> (Greater)',
-    EQ_OP:'= (Equal)', NOT_EQUAL_OP:'<> (Not Equal)',
-    AND_OP:'&& (AND)', OR_OP:'|| (OR)',
-    SEMICOLON:'Semicolon', COMMA:'Comma',
-    LEFT_PAREN:'Left Paren', RIGHT_PAREN:'Right Paren',
-    LEFT_BRACE:'Left Brace', RIGHT_BRACE:'Right Brace',
-    COMMENT:'Comment', ERROR:'Lexical Error',
-  };
-  return map[type] || type;
+function toggleAll(expand) {
+  document.querySelectorAll('#tree-root li').forEach(li => {
+    const btn = li.querySelector(':scope > span > .expand-btn');
+    if (!btn) return;
+    if (expand) { li.classList.remove('collapsed'); btn.textContent='−'; }
+    else        { li.classList.add('collapsed');    btn.textContent='+'; }
+  });
 }
 
-/* ═══════════════════════════════════════════════════
-   MAIN SCAN
-   ═══════════════════════════════════════════════════ */
-function scan() {
-  const src = document.getElementById('code-input').value;
+/* ═══════════════════════════════════════════════
+   RENDER — ERRORS
+═══════════════════════════════════════════════ */
+function renderErrors(errors, phase) {
+  const panelId = phase==='lex' ? 'errs-lex' : 'errs-syn';
+  const panel = document.getElementById(panelId);
+  const mine = errors.filter(e=>e.phase===phase);
+  if (!mine.length){panel.innerHTML='';return}
+  panel.innerHTML = mine.map(e=>`
+    <div class="err-row">
+      <span class="err-icon">✕</span>
+      <span class="err-phase ep-${phase}">${phase==='lex'?'LEX':'SYN'}</span>
+      <span class="err-msg">${esc(e.msg)}</span>
+      <span class="err-loc">line ${e.line}</span>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════════════
+   COMPILE — main entry
+═══════════════════════════════════════════════ */
+let allTokens = [];
+let autoTimer = null;
+
+function compile() {
+  const src = document.getElementById('src').value;
   if (!src.trim()) { clearOutput(); return; }
 
-  tokens = currentMode === 'dfa' ? dfaScan(src) : regexScan(src);
-  renderTable();
-  renderErrors();
-  renderStats();
+  // Phase 1
+  const {tokens, errors: lexErrors} = lex(src);
+  allTokens = tokens;
+
+  // Phase 2
+  const {tree, errors: synErrors} = parse(tokens);
+
+  renderTokens(tokens);
+  renderTree(tree);
+  renderErrors(lexErrors, 'lex');
+  renderErrors(synErrors, 'syn');
+  updateStatus(tokens, lexErrors, synErrors);
 }
 
-function autoScan() {
-  clearTimeout(autoScanTimer);
-  autoScanTimer = setTimeout(scan, 600);
-  updateCharCount();
+function updateStatus(tokens, lexErrs, synErrs) {
+  const totalErrs = lexErrs.length + synErrs.length;
+  const sb = document.getElementById('sb-phase');
+  const errc = document.getElementById('sb-errc');
+
+  if (totalErrs===0){
+    sb.className='sb-item ok';sb.textContent='✓ Parsed OK';
+  } else {
+    sb.className='sb-item err';sb.textContent=`✕ ${totalErrs} error${totalErrs>1?'s':''}`;
+  }
+  document.getElementById('sb-tok').textContent  = tokens.length;
+  document.getElementById('sb-kw').textContent   = tokens.filter(t=>t.type==='KEYWORD').length;
+  document.getElementById('sb-id').textContent   = tokens.filter(t=>t.type==='IDENTIFIER').length;
+  document.getElementById('sb-num').textContent  = tokens.filter(t=>t.type==='NUMBER').length;
+  errc.textContent  = totalErrs;
+  errc.style.color  = totalErrs ? 'var(--red)' : 'var(--green)';
 }
 
-/* ═══════════════════════════════════════════════════
-   RENDER TABLE
-   ═══════════════════════════════════════════════════ */
-function renderTable() {
-  const tbody = document.getElementById('token-body');
-  const ph = document.getElementById('placeholder');
-  const table = document.getElementById('token-table');
-
-  if (!tokens.length) { ph.style.display='flex'; table.style.display='none'; return; }
-  ph.style.display='none'; table.style.display='table';
-
-  const rows = tokens.map(t => {
-    const lex = t.lexeme.length > 40 ? t.lexeme.slice(0,40)+'…' : t.lexeme;
-    const display = t.type === 'COMMENT' ? '/* comment */' : lex;
-    return `<tr>
-      <td class="td-num">${t.n}</td>
-      <td class="td-line">${t.line}</td>
-      <td class="td-lexeme">${escHtml(display)}</td>
-      <td class="td-type"><span class="type-badge ${badgeClass(t.type)}">${friendlyType(t.type)}</span></td>
-    </tr>`;
-  });
-  tbody.innerHTML = rows.join('');
+function onInput() {
+  updateLineNums();
+  updateCharStat();
+  clearTimeout(autoTimer);
+  autoTimer = setTimeout(compile, 700);
 }
 
-/* ═══════════════════════════════════════════════════
-   RENDER ERRORS
-   ═══════════════════════════════════════════════════ */
-function renderErrors() {
-  const panel = document.getElementById('errors-panel');
-  const errs = tokens.filter(t => t.type === 'ERROR');
-  if (!errs.length) { panel.innerHTML=''; return; }
-  panel.innerHTML = errs.map(e =>
-    `<div class="error-row">
-      <span class="err-icon">✕</span>
-      <span class="err-msg">Lexical error: unexpected character '${escHtml(e.lexeme)}'</span>
-      <span class="err-pos">line ${e.line}</span>
-    </div>`
-  ).join('');
-}
-
-/* ═══════════════════════════════════════════════════
-   RENDER STATS
-   ═══════════════════════════════════════════════════ */
-function renderStats() {
-  const bar = document.getElementById('stats-bar');
-  if (!tokens.length) { bar.style.display='none'; return; }
-  bar.style.display='flex';
-  const count = t => tokens.filter(x => x.type === t).length;
-  const countGroup = (...ts) => tokens.filter(x => ts.includes(x.type)).length;
-  document.getElementById('st-total').textContent = tokens.length;
-  document.getElementById('st-kw').textContent = count('KEYWORD');
-  document.getElementById('st-id').textContent = count('IDENTIFIER');
-  document.getElementById('st-num').textContent = count('NUMBER');
-  document.getElementById('st-str').textContent = count('STRING');
-  document.getElementById('st-err').textContent = count('ERROR');
-}
-
-/* ═══════════════════════════════════════════════════
-   UI HELPERS
-   ═══════════════════════════════════════════════════ */
 function clearOutput() {
-  tokens = [];
-  document.getElementById('placeholder').style.display='flex';
-  document.getElementById('token-table').style.display='none';
-  document.getElementById('errors-panel').innerHTML='';
-  document.getElementById('stats-bar').style.display='none';
-  document.getElementById('dfa-trace').innerHTML='';
+  allTokens=[];
+  document.getElementById('ph-tok').style.display='flex';
+  document.getElementById('ttable').style.display='none';
+  document.getElementById('ph-tree').style.display='flex';
+  document.getElementById('tree-root').innerHTML='';
+  document.getElementById('errs-lex').innerHTML='';
+  document.getElementById('errs-syn').innerHTML='';
+  document.getElementById('sb-phase').className='sb-item';
+  document.getElementById('sb-phase').textContent='Parser Ready';
+  ['sb-tok','sb-kw','sb-id','sb-num','sb-errc'].forEach(id=>document.getElementById(id).textContent='0');
 }
 
 function clearAll() {
-  document.getElementById('code-input').value='';
-  updateLineNums(); updateCharCount(); clearOutput();
+  document.getElementById('src').value='';
+  updateLineNums(); updateCharStat(); clearOutput();
 }
 
-function loadSample(key) {
-  document.querySelectorAll('.mode-tab').forEach((t,i)=>t.classList.toggle('active',['sample1','sample2','blank'][i]===key));
-  document.getElementById('code-input').value = SAMPLES[key];
-  updateLineNums(); updateCharCount();
-  if (SAMPLES[key].trim()) scan();
-  else clearOutput();
+function loadSample(i, btn) {
+  document.querySelectorAll('.sample-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('src').value = SAMPLES[i];
+  updateLineNums(); updateCharStat();
+  if (SAMPLES[i].trim()) compile(); else clearOutput();
 }
 
 function updateLineNums() {
-  const val = document.getElementById('code-input').value;
-  const lines = val.split('\n').length;
-  const container = document.getElementById('line-nums');
-  let html = '';
-  for (let i = 1; i <= lines; i++) html += `<div class="line-num">${i}</div>`;
-  container.innerHTML = html;
+  const lines = document.getElementById('src').value.split('\n').length;
+  document.getElementById('lnc').innerHTML =
+    Array.from({length:lines},(_,i)=>`<div class="ln">${i+1}</div>`).join('');
 }
-
-function updateCharCount() {
-  const l = document.getElementById('code-input').value.length;
-  document.getElementById('char-count').innerHTML = `<span>${l}</span> chars`;
+function updateCharStat() {
+  const l = document.getElementById('src').value.length;
+  document.getElementById('cstat').innerHTML = `<b>${l}</b> chars`;
 }
-
-function copyTokens() {
-  if (!tokens.length) return;
-  const csv = 'N,Line,Lexeme,Token Type\n' +
-    tokens.map(t => `${t.n},${t.line},"${t.lexeme.replace(/"/g,'""')}",${t.type}`).join('\n');
+function copyCSV() {
+  if (!allTokens.length) return;
+  const csv = 'N,Line,Value,Type\n'+allTokens.map((t,i)=>`${i+1},${t.line},"${t.val.replace(/"/g,'""')}",${t.type}`).join('\n');
   navigator.clipboard.writeText(csv).catch(()=>{});
 }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
 
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+/* ── RESIZER ── */
+function makeResizer(id, getLeft) {
+  const el = document.getElementById(id);
+  let dragging=false, startX=0, startW=0;
+  el.addEventListener('mousedown',e=>{dragging=true;startX=e.clientX;startW=getLeft().offsetWidth;el.classList.add('dragging');document.body.style.cursor='col-resize';document.body.style.userSelect='none'});
+  document.addEventListener('mousemove',e=>{if(!dragging)return;const w=Math.max(220,Math.min(600,startW+e.clientX-startX));getLeft().style.width=w+'px'});
+  document.addEventListener('mouseup',()=>{if(!dragging)return;dragging=false;el.classList.remove('dragging');document.body.style.cursor='';document.body.style.userSelect=''});
 }
+makeResizer('r1',()=>document.getElementById('sidebar'));
+makeResizer('r2',()=>document.getElementById('coltok'));
 
-/* ═══════════════════════════════════════════════════
-   RESIZER
-   ═══════════════════════════════════════════════════ */
-const resizer = document.getElementById('resizer');
-const leftPanel = document.getElementById('left-panel');
-let isResizing = false, startX = 0, startW = 0;
-resizer.addEventListener('mousedown', e => {
-  isResizing = true; startX = e.clientX; startW = leftPanel.offsetWidth;
-  document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none';
-});
-document.addEventListener('mousemove', e => {
-  if (!isResizing) return;
-  const w = Math.max(280, Math.min(650, startW + e.clientX - startX));
-  leftPanel.style.width = w + 'px';
-});
-document.addEventListener('mouseup', () => {
-  isResizing = false;
-  document.body.style.cursor = '';
-  document.body.style.userSelect = '';
-});
-
-/* ═══════════════════════════════════════════════════
-   INIT
-   ═══════════════════════════════════════════════════ */
-loadSample('sample1');
-document.getElementById('dfa-trace').style.display = 'none';
+/* ── INIT ── */
+loadSample(0, document.querySelector('.sample-btn.active'));
 </script>
 </body>
 </html>
